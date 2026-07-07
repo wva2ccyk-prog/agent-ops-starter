@@ -1,5 +1,7 @@
 # 비개발자가 AI를 반년 굴리며 배운 것 — 왜 이 킷은 이렇게 생겼나
 
+**한국어** | [English](#what-a-non-developer-learned-from-running-ai-for-half-a-year--why-this-kit-looks-the-way-it-does)
+
 나는 개발자가 아니다. 그런데 AI CLI를 매일 쓰다 보니 어느새 규칙 문서 수백
 개를 가진 운영 체계를 혼자 만들어 굴리고 있었다. 그 과정에서 비용이 폭발해
 전면 개편을 한 번 했고, 여러 모델에게 감사를 맡겼고, 유행하는 메모리·RAG
@@ -79,3 +81,105 @@
 않는다. 내가 겪은 붕괴는 전부 이 세 가지 중 하나가 깨졌을 때 왔다.
 
 — 반년간 AI 운영 체계를 만들고 부수고 다시 만든 어느 비개발자
+
+---
+
+# What a Non-Developer Learned from Running AI for Half a Year — Why This Kit Looks the Way It Does
+
+[한국어](#비개발자가-ai를-반년-굴리며-배운-것--왜-이-킷은-이렇게-생겼나) | **English**
+
+I am not a developer. But after using AI CLIs every day, I found myself
+running an operating system of hundreds of rule documents that I had built
+alone. Along the way my costs exploded and forced one full overhaul; I had
+multiple models audit the system; I investigated the trending memory and RAG
+tools. This kit is the skeleton of **only what survived**. Below are the
+conclusions of that half year.
+
+## A Record of Failures (in the order I hit them)
+
+**1. AI hoards memory even when you don't ask.** Things I said kept
+accumulating into the rule docs without me noticing, and per-session input
+costs exploded. "Preserve" is the AI's default. Accumulation without a
+forgetting mechanism always bloats.
+
+**2. I added tags; they did nothing.** Dreaming of an LLM wiki, I tagged and
+classified every document. When I later asked the AI directly, it had never
+used a single tag. Tags are visible only **after** a file is opened, so they
+cannot contribute to the decision of *whether* to open it. Navigation happens
+only through file names, a name-tag resolver, and pointers inside documents
+already read. I deleted 1,300 lines of tags and nothing changed.
+
+**3. A written rule is not a followed rule.** I carefully wrote a rule to
+"use external worker models," then actually measured compliance: 42%. The
+reason was structural: the rule lived inside a read-on-demand document, and an
+AI that isn't considering delegation has no reason to open that document.
+**A rule inside an unopened file is a rule that does not exist.**
+
+**4. Ask an AI for self-reflection and it confabulates.** I created
+self-report fields like "assess whether you over-executed." The AI just made
+up "no." Fake compliance data is worse than no data. Never demand metrics the
+AI cannot compute — measurement belongs to scripts.
+
+**5. Deletion requests swing to extremes.** Say "clean up carefully" and it
+preserves everything; say "delete boldly" and it deletes indiscriminately.
+External auditor models did the same. When you ask an AI the absolute question
+"is this important?", the threshold comes from the tone of your instruction,
+not from evidence.
+
+**6. Every review produces findings.** Whichever model I hired, "things to
+fix" came back — often in opposite directions. For an LLM given the reviewer
+role, "nothing to fix" is a practically impossible output. Findings are not
+evidence that your system is deficient.
+
+**7. Trending memory products collapse under long-term operation.** I studied
+vector/embedding auto-memory and couldn't see why it was good; that instinct
+was correct. Similarity search retrieves "what sounds alike" — it cannot tell
+a discarded old decision from yesterday's decision, and the pollution worsens
+as the corpus grows. And a human cannot audit what's inside the store: even
+while it is collapsing, you only find out after it has collapsed.
+
+## The Principles That Survived
+
+1. **One always-loaded file, and it is a router.** A signpost, not a
+   rulebook. Everything else lives behind doors and is opened on demand. An
+   AI reads files whole, so cost reduction comes only from "smaller files,
+   fewer opens."
+2. **Every document gets one row in the resolver.** An unregistered document
+   does not exist for the AI. Do not build tag taxonomies — they are
+   decoration.
+3. **Prose < templates < scripts.** Prose rules are the weakest instrument.
+   What you want enforced becomes a required blank in a template; what you
+   want verified becomes a script.
+4. **The AI has no clock and no gauge.** Machines (schedulers) initiate
+   periodic checks, scripts do the measuring, and the AI only reads results
+   and proposes.
+5. **Deletion by ranking + quota, never absolute judgment.** "Propose at most
+   10 items, least valuable first, each with one citable signal. I approve
+   before anything is applied." That one sentence blocks both keep-everything
+   and delete-everything.
+6. **Unattended runs are proposal-only, forever.** Never give document-edit
+   authority to an AI running without a human watching. Its output must
+   always be a proposal left in a file.
+7. **Accumulation collapses without governance.** Add a rule only for a
+   measured gap or a lived failure; delete rules that never fire. Never mix
+   state (what changes) and rules (what doesn't) in the same file.
+8. **Memory is a consolidation pipeline.** Keep raw logs out of the read
+   path; periodically spend tokens distilling them into reusable lessons;
+   keep only the lessons in the read path. This is the only physically
+   possible long-term memory for an LLM with frozen weights — it is what
+   human sleep does.
+9. **Know how to declare "done."** If checks pass twice in a row and the
+   metrics are stable, don't touch it. Maintenance itself has a cost, and
+   frequent revision is oscillation, not improvement.
+
+## To Whoever Uses This Kit
+
+This kit is small not because it is a beginning, but because smallness is the
+conclusion. As your work grows, your documents will grow too — but as long as
+every new document is registered in the resolver, per-session reads stay at
+two or three files, and the monthly check passes, this system will not
+collapse. Every collapse I lived through came from breaking one of those
+three.
+
+— A non-developer who built, broke, and rebuilt an AI operating system for
+half a year

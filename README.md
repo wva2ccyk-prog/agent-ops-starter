@@ -1,4 +1,6 @@
-# Agent Ops Starter — AI CLI 장기 운영 스타터 킷
+# Agent Ops Starter
+
+**한국어** | [English](#english)
 
 AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않게** 굴리기
 위한 최소 골격입니다. 비개발자가 반년간 실제 운영하며 겪은 붕괴(비용 폭발,
@@ -54,6 +56,68 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
 - macOS/Linux 사용자는 `check_docs.ps1`을 AI에게 주고 "bash로 포팅해 줘" 하면
   됩니다.
 
-## 라이선스
+---
 
-원하는 라이선스를 직접 추가하세요 (공유가 목적이면 MIT 권장).
+# English
+
+[한국어](#agent-ops-starter) | **English**
+
+A minimal skeleton for running AI CLIs (Codex, Claude Code, Gemini CLI, etc.)
+**for months without collapse**. A non-developer operated a real system for
+half a year, went through the failures — cost explosion, rule bloat, memory
+rot — and kept only the structure that survived.
+
+Read [ESSAY.md](ESSAY.md) first to see why the kit is shaped this way.
+It takes ten minutes.
+
+## Quickstart (5 minutes)
+
+1. Copy the contents of this folder into the working folder (project root)
+   where you run your AI CLI.
+2. That's it. Most AI CLIs auto-load `AGENTS.md` (Claude Code uses the name
+   `CLAUDE.md` — make a copy, or put one line "Read AGENTS.md first" in it).
+3. Fill in `docs/STATE.md` and `docs/MEMORY_LEDGER.md` for your own situation.
+   They are fill-in-the-blank templates.
+
+## File Map
+
+| File | Role | Read by |
+|---|---|---|
+| `AGENTS.md` | The only always-loaded file. A router — not a rulebook | AI (every session) |
+| `docs/RETRIEVAL_MAP.md` | Name tags for docs. The AI resolves a path here and opens only what it needs | AI (on demand) |
+| `docs/OPERATING_PRINCIPLES.md` | Core rules: intake gate for new rules, diet protocol, boundaries needing human approval | AI (rule work) |
+| `docs/STATE.md` | What is being worked on now — a snapshot (never a diary) | AI (resuming) |
+| `docs/MEMORY_LEDGER.md` | Reusable lessons only | AI (when relevant) |
+| `docs/HANDOFF_TEMPLATE.md` | Task-instruction form for giving the AI bounded work | Humans (copy per task) |
+| `tools/check_docs.ps1` | Docs integrity check (Windows PowerShell). Run monthly | Humans |
+| `ESSAY.md` | Where this structure came from — half a year of failures and principles | Humans |
+
+## Operating Routine (the human's job)
+
+- **Daily**: nothing. The AI reads only the docs it needs.
+- **When meaningful work finishes**: tell the AI "update STATE.md, and add one
+  line to MEMORY_LEDGER only if there is a genuinely reusable lesson."
+- **Monthly (5 min)**: run `tools/check_docs.ps1` → confirm `RESULT: PASS`.
+  If FAIL, paste the output to the AI and say "fix it."
+- **Quarterly**: tell the AI "following the Diet Protocol in
+  OPERATING_PRINCIPLES, propose deletion candidates as a ranked list only. Do
+  not apply." → skim, approve, and let it delete only the approved items.
+
+## Before Adding Any Rule (the most important part)
+
+New rules must pass the three Intake Gate questions in
+`docs/OPERATING_PRINCIPLES.md`. The gist: **no measured gap or lived failure,
+no rule.** This kit is small not because it is unfinished, but because that is
+the principle.
+
+## Customizing
+
+- Every new doc must get one row in `docs/RETRIEVAL_MAP.md`. An unregistered
+  doc does not exist for the AI.
+- When a repeating task family emerges (reports, research, etc.), create
+  `docs/lanes/<task>/` and keep task-specific rules there — not in AGENTS.md.
+- On macOS/Linux, hand `check_docs.ps1` to your AI and say "port this to bash."
+
+## License
+
+MIT — see [LICENSE](LICENSE).
