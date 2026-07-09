@@ -1,8 +1,9 @@
 param()
 
 # Monthly integrity check for the starter kit docs. Read-only.
-# PASS/FAIL on: resolver rows resolve, no duplicate names/paths,
-# no orphan docs, size budgets. Run: powershell -ExecutionPolicy Bypass -File tools\check_docs.ps1
+# FAIL on: resolver rows that don't resolve, duplicate names/paths, unresolved
+# doc: tokens. WARN only: orphan docs, size budgets.
+# Run: powershell -ExecutionPolicy Bypass -File tools\check_docs.ps1
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
