@@ -18,6 +18,10 @@ New docs must be registered in `doc:RETRIEVAL_MAP` or they do not exist.
 Keep state (things that change) and rules (things that don't) in separate
 files — mixed files go stale as a whole.
 
+Task-specific guidance gets its own registered doc, loaded on its trigger.
+Never fold it into a doc that unrelated work already reads: a tool endpoint or
+domain rule buried in a general doc is paid for on every turn that opens it.
+
 ## Diet Protocol (removing rules/docs without the keep-all/delete-all failure)
 
 Models are poorly calibrated at absolute "is this important?" judgments.
