@@ -28,7 +28,8 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
 | `docs/STATE.md` | 지금 무엇을 하고 있는가 — 스냅샷 (일기 금지) | AI (재개할 때) |
 | `docs/MEMORY_LEDGER.md` | 재사용할 교훈만 축적 | AI (관련될 때) |
 | `docs/HANDOFF_TEMPLATE.md` | AI에게 일 시킬 때 쓰는 작업 지시 양식 | 사람이 복사해서 사용 |
-| `tools/check_docs.ps1` | 문서 무결성 검사 (Windows PowerShell). 월 1회 실행 | 사람 |
+| `tools/check_docs.py` | 문서 무결성 검사 (Python, 모든 OS). 월 1회 실행 | 사람 |
+| `tools/check_docs.ps1` | 같은 검사의 PowerShell 판. 파이썬이 없을 때 | 사람 |
 | `ESSAY.md` | 이 구조가 나온 이유 — 반년 운영의 실패 기록과 원리 | 사람 |
 
 ## 운영 루틴 (사람이 할 일)
@@ -36,7 +37,8 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
 - **매일**: 없음. AI가 알아서 필요한 문서만 읽습니다.
 - **일이 끝날 때**: 의미 있는 작업이면 AI에게 "STATE.md 갱신하고, 재사용할
   교훈이 있으면 MEMORY_LEDGER에 한 줄 추가해" 라고 지시.
-- **월 1회 (5분)**: `tools/check_docs.ps1` 실행 → `RESULT: PASS` 확인.
+- **월 1회 (5분)**: `python3 tools/check_docs.py` 실행 → `RESULT: PASS` 확인.
+  (파이썬이 없으면 `pwsh -NoProfile -File tools/check_docs.ps1`)
   FAIL이면 출력을 AI에게 붙여넣고 "고쳐줘".
 - **분기 1회**: AI에게 "OPERATING_PRINCIPLES의 Diet Protocol에 따라 삭제 후보를
   순위 목록으로만 제안해. 적용하지 마." → 훑어보고 승인한 것만 지우게 함.
@@ -53,8 +55,8 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
   등록 안 된 문서는 AI에게 존재하지 않는 문서입니다.
 - 반복 작업(보고서 작성, 자료 정리 등)이 생기면 `docs/lanes/<작업명>/` 폴더를
   만들고 그 안에 작업 전용 규칙을 두세요. AGENTS.md에는 넣지 마세요.
-- macOS/Linux 사용자는 `check_docs.ps1`을 AI에게 주고 "bash로 포팅해 줘" 하면
-  됩니다.
+- 검사기는 두 판 모두 같은 항목을 검사합니다. 둘 중 편한 것을 쓰세요.
+  검사기가 제대로 작동하는지 확인하려면 `python3 tools/check_docs.py --self-test`.
 
 ---
 
@@ -89,7 +91,8 @@ It takes ten minutes.
 | `docs/STATE.md` | What is being worked on now — a snapshot (never a diary) | AI (resuming) |
 | `docs/MEMORY_LEDGER.md` | Reusable lessons only | AI (when relevant) |
 | `docs/HANDOFF_TEMPLATE.md` | Task-instruction form for giving the AI bounded work | Humans (copy per task) |
-| `tools/check_docs.ps1` | Docs integrity check (Windows PowerShell). Run monthly | Humans |
+| `tools/check_docs.py` | Docs integrity check (Python, any OS). Run monthly | Humans |
+| `tools/check_docs.ps1` | Same checks in PowerShell, for machines without Python | Humans |
 | `ESSAY.md` | Where this structure came from — half a year of failures and principles | Humans |
 
 ## Operating Routine (the human's job)
@@ -97,7 +100,8 @@ It takes ten minutes.
 - **Daily**: nothing. The AI reads only the docs it needs.
 - **When meaningful work finishes**: tell the AI "update STATE.md, and add one
   line to MEMORY_LEDGER only if there is a genuinely reusable lesson."
-- **Monthly (5 min)**: run `tools/check_docs.ps1` → confirm `RESULT: PASS`.
+- **Monthly (5 min)**: run `python3 tools/check_docs.py` → confirm `RESULT: PASS`
+  (no Python? `pwsh -NoProfile -File tools/check_docs.ps1`).
   If FAIL, paste the output to the AI and say "fix it."
 - **Quarterly**: tell the AI "following the Diet Protocol in
   OPERATING_PRINCIPLES, propose deletion candidates as a ranked list only. Do
@@ -116,7 +120,8 @@ the principle.
   doc does not exist for the AI.
 - When a repeating task family emerges (reports, research, etc.), create
   `docs/lanes/<task>/` and keep task-specific rules there — not in AGENTS.md.
-- On macOS/Linux, hand `check_docs.ps1` to your AI and say "port this to bash."
+- Both checkers run the same checks — use whichever fits your machine. To prove
+  the checker itself works: `python3 tools/check_docs.py --self-test`.
 
 ## License
 
