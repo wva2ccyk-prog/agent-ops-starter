@@ -3,17 +3,18 @@ param()
 # Monthly integrity check for the starter kit docs. Read-only.
 # FAIL on: resolver rows that don't resolve, duplicate names/paths, unresolved
 # doc: tokens. WARN only: orphan docs, size budgets.
-# Run: powershell -ExecutionPolicy Bypass -File tools\check_docs.ps1
+# Run: pwsh -NoProfile -File tools/check_docs.ps1
+# (Python twin with identical checks: python3 tools/check_docs.py)
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
-$mapPath = Join-Path $root "docs\RETRIEVAL_MAP.md"
+$mapPath = Join-Path $root "docs" | Join-Path -ChildPath "RETRIEVAL_MAP.md"
 
 $errors = @()
 $warnings = @()
 
 if (-not (Test-Path -LiteralPath $mapPath)) {
-    Write-Output "RESULT: FAIL (docs\RETRIEVAL_MAP.md missing)"
+    Write-Output "RESULT: FAIL (docs/RETRIEVAL_MAP.md missing)"
     exit 1
 }
 
@@ -29,16 +30,19 @@ if ($rows.Count -eq 0) { $errors += "no resolver rows found in RETRIEVAL_MAP.md"
 # Rows must resolve; names and paths must be unique
 $seenName = @{}; $seenPath = @{}
 foreach ($r in $rows) {
-    $abs = Join-Path $root ($r.Path -replace '/', '\')
+    # Use the platform separator so this works on Windows, macOS, and Linux
+    # (PowerShell 7 runs on all three).
+    $abs = Join-Path $root ($r.Path -replace '/', [IO.Path]::DirectorySeparatorChar)
     if (-not (Test-Path -LiteralPath $abs)) { $errors += "resolver row points to missing file: $($r.Name) -> $($r.Path)" }
     if ($seenName.ContainsKey($r.Name)) { $errors += "duplicate NAME: $($r.Name)" } else { $seenName[$r.Name] = $true }
     if ($seenPath.ContainsKey($r.Path)) { $errors += "duplicate path: $($r.Path)" } else { $seenPath[$r.Path] = $true }
 }
 
-# Orphans: every md under docs\ must have a resolver row
+# Orphans: every md under docs/ must have a resolver row
 $docFiles = Get-ChildItem -LiteralPath (Join-Path $root "docs") -Recurse -File -Filter "*.md"
 foreach ($f in $docFiles) {
-    $rel = $f.FullName.Substring($root.Length).TrimStart('\') -replace '\\', '/'
+    # Normalize to resolver form (forward slashes, no leading separator) on any OS.
+    $rel = $f.FullName.Substring($root.Length).TrimStart('\', '/') -replace '\\', '/'
     if (-not $seenPath.ContainsKey($rel)) { $warnings += "orphan doc (not in resolver): $rel" }
 }
 
