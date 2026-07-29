@@ -27,11 +27,12 @@ relay to work around it.
 If the requested project or model cannot be verified, stop before sending and
 report the boundary instead of silently choosing another route.
 
-The composer's model control is a button labeled with the current tier (`High`,
-`Extra High`, `Pro`), not a model name. A loose `High` match also matches
-`Extra High`, so match exactly. Confirm the checked item before sending, then
-confirm the tier the answer itself reports; an unconfirmed tier is not evidence
-for the requested one.
+The composer's model control is a button labeled with the current tier, not a
+model name. Labels are localized: for example, English uses `High`, `Extra
+High`, and `Pro`, while the Korean UI uses `높음`, `매우 높음`, and `Pro`. A
+loose match can select the wrong tier, so match the visible label exactly.
+Confirm the checked item before sending, then confirm the tier the answer itself
+reports; an unconfirmed tier is not evidence for the requested one.
 
 ## Send
 
@@ -60,7 +61,8 @@ answer even after the tab closes or the automation session resets.
 A long answer can run for tens of minutes, and you do not need to estimate how
 long. Block on the completion signal rather than sampling on a timer:
 
-- `Copy response` becoming visible is the completion signal;
+- the latest assistant turn's copy action becoming visible (for example,
+  `Copy response` or `응답 복사`) is the completion signal;
 - streaming hides the composer buttons, so their absence means "still working";
 - waiting sends nothing to ChatGPT, so a slow run costs local calls, not
   subscription capacity.

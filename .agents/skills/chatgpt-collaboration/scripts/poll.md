@@ -1,21 +1,31 @@
 # Waiting On A Long ChatGPT Run
 
-Reference for the Codex in-app browser, verified 2026-07-30 on macOS. Paste these
-blocks into the Node REPL `js` tool after the browser runtime and the in-app
-browser binding exist.
+Reference for the Codex in-app browser, verified 2026-07-30 on macOS and on a
+Windows machine using the Korean ChatGPT UI. Paste these blocks into the Node
+REPL `js` tool after the browser runtime and the in-app browser binding exist.
 
-The measurements come from one machine and one build of the ChatGPT web UI. The
-approach holds; the exact labels can drift. Re-confirm the completion signal once
-on a new machine before trusting a long unattended wait.
+The timing measurements below come from one macOS machine and one ChatGPT web
+build. The completion signal, localized labels, and URL recovery were
+re-confirmed on Windows with the Korean UI. The approach holds; exact labels and
+DOM attributes can still drift. Re-confirm the completion signal once on a new
+machine before trusting a long unattended wait.
 
 ## Completion signal
 
-While a reply is streaming, the composer buttons are gone: `Send prompt` is `0`
-and no `Stop streaming` button exists in this build. The reliable edge is the
-response-actions group appearing.
+While a reply is streaming, the composer buttons are gone: the send control is
+absent and no stop-streaming button exists in these builds. The reliable edge is
+the latest assistant turn's response-actions group appearing.
 
-`Copy response` becoming visible means generation finished. This is the only
-signal that held across every test.
+The assistant copy action becoming visible means generation finished. It is
+localized (`Copy response` in English, `응답 복사` in Korean), so the runnable
+code uses the stable `copy-turn-action-button` test ID and scopes it to the
+latest assistant turn. Do not watch the test ID globally: the user-message copy
+button uses the same ID and would be a false positive.
+
+The tier labels are localized too. The Korean UI showed `높음`, `매우 높음`,
+and `Pro` where the English UI showed `High`, `Extra High`, and `Pro`. Select
+the exact visible menu item and confirm its checked state; never use a loose
+`High` text match.
 
 Rejected alternatives, each tested and each wrong:
 
@@ -43,10 +53,16 @@ records completion for later cannot be installed.
 
 ## Send without waiting
 
-Record the conversation URL immediately after send. It is the durable handle.
+Record the current turn count before sending, then record the conversation URL
+immediately after send. The baseline prevents an older completed answer from
+satisfying the wait; the URL is the durable recovery handle.
 
 ```js
-await tab.playwright.getByRole("button", { name: "Send prompt" }).click();
+globalThis.turnsBeforeSend = tab.playwright.locator(
+  'section[data-testid^="conversation-turn-"]'
+);
+globalThis.turnCountBeforeSend = await turnsBeforeSend.count();
+await tab.playwright.getByTestId("send-button").click();
 await tab.playwright.waitForTimeout(4000);   // let the URL settle to /c/<id>
 globalThis.convUrl = await tab.url();        // https://chatgpt.com/c/<id>
 nodeRepl.write(convUrl);                     // save this into the run notes
@@ -65,18 +81,44 @@ Each iteration is a blocking wait, not an interval sample.
 
 ```js
 globalThis.awaitAnswer = async ({ budgetMs = 240000, stepMs = 20000 } = {}) => {
-  const done = tab.playwright.getByRole("button", { name: "Copy response" });
+  const turns = tab.playwright.locator(
+    'section[data-testid^="conversation-turn-"]'
+  );
   const until = Date.now() + budgetMs;
   const start = Date.now();
   let probes = 0;
   while (Date.now() < until) {
     probes++;
-    try {
-      await done.waitFor({ state: "visible", timeoutMs: Math.min(stepMs, Math.max(1000, until - Date.now())) });
-      return { status: "done", probes, elapsedMs: Date.now() - start };
-    } catch { /* not yet */ }
+    const count = await turns.count();
+    if (count > turnCountBeforeSend) {
+      const candidate = turns.nth(count - 1); // safe: count was just checked
+      const isAssistant = await candidate.locator(
+        '[data-message-author-role="assistant"]'
+      ).count();
+      if (isAssistant > 0) {
+        const done = candidate.getByTestId("copy-turn-action-button");
+        try {
+          await done.waitFor({
+            state: "visible",
+            timeoutMs: Math.min(
+              stepMs,
+              Math.max(1000, until - Date.now())
+            )
+          });
+          return { status: "done", probes, elapsedMs: Date.now() - start };
+        } catch { /* reply exists, still streaming */ }
+        continue;
+      }
+    }
+    await tab.playwright.waitForTimeout(
+      Math.min(250, Math.max(1, until - Date.now()))
+    );
   }
-  return { status: (await done.count()) > 0 ? "done" : "still-running", probes, elapsedMs: Date.now() - start };
+  return {
+    status: "still-running",
+    probes,
+    elapsedMs: Date.now() - start
+  };
 };
 nodeRepl.write(JSON.stringify(await awaitAnswer()));   // pass timeout_ms: 300000
 ```
@@ -84,10 +126,10 @@ nodeRepl.write(JSON.stringify(await awaitAnswer()));   // pass timeout_ms: 30000
 Verified: a 52s answer returned `{status:"done", elapsedMs:52235}` from one call,
 with no duration guess supplied.
 
-Cost model, measured:
+Cost model:
 
-- one probe is ~10ms and sends nothing to ChatGPT;
-- probes *inside* one `js` call cost nothing in the transcript;
+- DOM checks and waits send nothing to ChatGPT;
+- re-arming *inside* one `js` call costs nothing in the transcript;
 - the only real cost is the number of `js` calls, so keep each call long. One
   call held a 120s sleep exactly (`held ms=119995`); 240s is safe under a 300s
   `timeout_ms`.
@@ -115,17 +157,32 @@ globalThis.tab = await iab.tabs.new();
 await tab.goto(convUrl);
 await tab.playwright.waitForLoadState({ state: "domcontentloaded", timeoutMs: 60000 });
 await tab.playwright.waitForTimeout(3000);
-nodeRepl.write("done=" + (await tab.playwright.getByRole("button", { name: "Copy response" }).count() > 0));
+globalThis.recoveredTurns = tab.playwright.locator(
+  'section[data-testid^="conversation-turn-"]'
+);
+globalThis.recoveredTurnCount = await recoveredTurns.count();
+globalThis.recoveredDone = false;
+if (recoveredTurnCount > 0) {
+  globalThis.recoveredLastTurn = recoveredTurns.nth(recoveredTurnCount - 1);
+  globalThis.recoveredDone =
+    await recoveredLastTurn.locator(
+      '[data-message-author-role="assistant"]'
+    ).count() > 0 &&
+    await recoveredLastTurn.getByTestId(
+      "copy-turn-action-button"
+    ).count() > 0;
+}
+nodeRepl.write("done=" + recoveredDone);
 ```
 
 This survives a full `js_reset`, a lost tab, and a closed browser.
 
 ## Reading the answer
 
-Read it from the DOM. `Copy response` is a completion *signal* only: clicking it
-did not populate the clipboard on this build (verified 2026-07-30 — a sentinel
-written with `clipboard.writeText` survived the click unchanged), so do not use
-the clipboard as the extraction path.
+Read it from the DOM. The assistant copy action is a completion *signal* only:
+clicking it did not populate the clipboard on the macOS build (verified
+2026-07-30 — a sentinel written with `clipboard.writeText` survived the click
+unchanged), so do not use the clipboard as the extraction path.
 
 ```js
 globalThis.md = tab.playwright.locator("div.markdown");
