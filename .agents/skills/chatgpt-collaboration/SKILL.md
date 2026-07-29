@@ -74,6 +74,10 @@ Past roughly twenty minutes, stop holding the session open. Persist the
 conversation URL, sleep until later, then reopen the URL and check the signal
 once. Never resend a prompt because generation is slow.
 
+`scripts/poll.md` has the runnable version for the Codex in-app browser: a
+blocking wait helper, call budgets, recovery by URL, and the measurements behind
+each rejected approach. Read it when actually waiting on a long run.
+
 ## Resolve
 
 After each response, identify unresolved claims, missing evidence, and material
