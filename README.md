@@ -71,6 +71,11 @@ Codex 앱에서 "GPT와 협업해" 또는 "GPT Pro에게 리뷰시켜"라고 요
 명시적으로 승인해야 합니다. 이 스킬은 선택될 때만 전체 내용을 읽으므로
 `AGENTS.md`의 상시 입력 비용을 늘리지 않습니다.
 
+답변이 수십 분 걸릴 수 있는데, 소요 시간을 미리 추정할 필요는 없습니다.
+스킬은 완료 신호에 대기를 걸어 답변이 끝나는 순간 이어서 작업하고, 대화 URL을
+기록해 두므로 탭이 닫혀도 결과를 다시 찾습니다. 대기 중에는 ChatGPT로 아무것도
+전송되지 않습니다.
+
 ---
 
 # English
@@ -148,6 +153,11 @@ This requires the Codex in-app browser and a signed-in ChatGPT account. Private
 files may be uploaded only when the user explicitly authorizes those files and
 ChatGPT as the destination. Codex loads the full skill only when it matches the
 request, so it does not add the workflow to the always-loaded `AGENTS.md`.
+
+A reply can take tens of minutes, and you never have to estimate how long. The
+skill blocks on the completion signal so it resumes the moment the answer lands,
+and it records the conversation URL so the result is recoverable even if the tab
+closes. Waiting sends nothing to ChatGPT.
 
 ## License
 
