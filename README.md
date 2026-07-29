@@ -28,6 +28,7 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
 | `docs/STATE.md` | 지금 무엇을 하고 있는가 — 스냅샷 (일기 금지) | AI (재개할 때) |
 | `docs/MEMORY_LEDGER.md` | 재사용할 교훈만 축적 | AI (관련될 때) |
 | `docs/HANDOFF_TEMPLATE.md` | AI에게 일 시킬 때 쓰는 작업 지시 양식 | 사람이 복사해서 사용 |
+| `.agents/skills/chatgpt-collaboration/SKILL.md` | 인앱 브라우저에서 ChatGPT와 협업하는 선택형 Codex 스킬 | Codex (관련 요청 때) |
 | `tools/check_docs.py` | 문서 무결성 검사 (Python, 모든 OS). 월 1회 실행 | 사람 |
 | `tools/check_docs.ps1` | 같은 검사의 PowerShell 판. 파이썬이 없을 때 | 사람 |
 | `ESSAY.md` | 이 구조가 나온 이유 — 반년 운영의 실패 기록과 원리 | 사람 |
@@ -57,6 +58,18 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
   만들고 그 안에 작업 전용 규칙을 두세요. AGENTS.md에는 넣지 마세요.
 - 검사기는 두 판 모두 같은 항목을 검사합니다. 둘 중 편한 것을 쓰세요.
   검사기가 제대로 작동하는지 확인하려면 `python3 tools/check_docs.py --self-test`.
+
+## Codex 선택 기능: ChatGPT 협업
+
+Codex 앱에서 "GPT와 협업해" 또는 "GPT Pro에게 리뷰시켜"라고 요청하면
+`.agents/skills/chatgpt-collaboration/` 스킬이 인앱 브라우저 협업 절차를
+제공합니다. 작은 질문은 새 채팅에서 직접 주고받고, 여러 파일이나 프로젝트
+전체 검토는 선별한 ZIP 패킷으로 전달합니다.
+
+이 기능은 Codex 인앱 브라우저와 로그인된 ChatGPT 계정이 있을 때만
+작동합니다. 외부로 보낼 비공개 파일은 사용자가 해당 파일과 목적지를
+명시적으로 승인해야 합니다. 이 스킬은 선택될 때만 전체 내용을 읽으므로
+`AGENTS.md`의 상시 입력 비용을 늘리지 않습니다.
 
 ---
 
@@ -91,6 +104,7 @@ It takes ten minutes.
 | `docs/STATE.md` | What is being worked on now — a snapshot (never a diary) | AI (resuming) |
 | `docs/MEMORY_LEDGER.md` | Reusable lessons only | AI (when relevant) |
 | `docs/HANDOFF_TEMPLATE.md` | Task-instruction form for giving the AI bounded work | Humans (copy per task) |
+| `.agents/skills/chatgpt-collaboration/SKILL.md` | Optional Codex workflow for collaborating with ChatGPT in the in-app browser | Codex (matching requests) |
 | `tools/check_docs.py` | Docs integrity check (Python, any OS). Run monthly | Humans |
 | `tools/check_docs.ps1` | Same checks in PowerShell, for machines without Python | Humans |
 | `ESSAY.md` | Where this structure came from — half a year of failures and principles | Humans |
@@ -122,6 +136,18 @@ the principle.
   `docs/lanes/<task>/` and keep task-specific rules there — not in AGENTS.md.
 - Both checkers run the same checks — use whichever fits your machine. To prove
   the checker itself works: `python3 tools/check_docs.py --self-test`.
+
+## Optional Codex Feature: ChatGPT Collaboration
+
+When you ask Codex to "collaborate with GPT" or "review this with GPT Pro,"
+the skill under `.agents/skills/chatgpt-collaboration/` supplies the in-app
+browser workflow. Small questions use a clean chat directly; multi-file or
+project-wide reviews use a curated ZIP packet.
+
+This requires the Codex in-app browser and a signed-in ChatGPT account. Private
+files may be uploaded only when the user explicitly authorizes those files and
+ChatGPT as the destination. Codex loads the full skill only when it matches the
+request, so it does not add the workflow to the always-loaded `AGENTS.md`.
 
 ## License
 

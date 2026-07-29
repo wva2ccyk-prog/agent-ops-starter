@@ -1,0 +1,4 @@
+interface:
+  display_name: "ChatGPT Collaboration"
+  short_description: "Review work with ChatGPT in the Codex in-app browser."
+  default_prompt: "Collaborate with ChatGPT on this task, resolve material disagreements, and return Codex's final decision."
