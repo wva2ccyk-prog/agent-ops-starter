@@ -1,6 +1,6 @@
 ---
 name: chatgpt-collaboration
-description: Use when the user asks Codex to collaborate with ChatGPT, GPT Thinking High, or GPT Pro through the Codex in-app browser. Codex remains the final planner, local operator, and acceptance authority.
+description: Use when the user asks Codex to collaborate with ChatGPT, GPT Thinking Extra High, or GPT Pro through the Codex in-app browser. Codex remains the final planner, local operator, and acceptance authority.
 ---
 
 # ChatGPT Collaboration
@@ -20,7 +20,7 @@ relay to work around it.
    only when no project is relevant.
 3. Create a clean chat instead of reusing an unrelated or context-heavy chat.
 4. Name it `YYYY-MM-DD | concise task summary`.
-5. Use Thinking High for normal collaboration. Use Pro only for broad,
+5. Use Thinking Extra High for normal collaboration. Use Pro only for broad,
    high-value review or when the user explicitly requests it.
 6. Never spend Pro capacity on a route smoke test.
 
