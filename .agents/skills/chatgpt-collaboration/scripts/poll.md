@@ -148,6 +148,6 @@ Do not hold the session open. Persist `convUrl`, set a heartbeat automation on
 the thread to wake after the expected duration, then on wakeup reopen `convUrl`
 and check the completion signal once. Zero probes are spent while asleep.
 
-This is the preferred path for Pro, Deep Research, and any Thinking High run over
+This is the preferred path for Pro, Deep Research, and any Thinking Extra High run over
 a wide packet, which can take tens of minutes. Nothing is lost by sleeping: the
 answer is generated server-side whether or not a tab is watching.
