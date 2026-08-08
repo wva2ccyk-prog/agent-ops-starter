@@ -1,8 +1,0 @@
-id,always,normal_bootstrap,resolver,checker_delta_loc,concept_delta,default_files,risk,note
-S0_CURRENT,1273,1273,884,0,0,6,1.0,Current Starter.
-S1_REPAIR_ONLY,1273,1273,884,0,0,6,0.8,Documentation/checker wording repair only.
-S2_OPTIONAL_SCOPED_ESCAPE,1273,1273,884,35,0,6,0.7,Current default; optional sharding only after scale trigger.
-S3_OPTIONAL_MULTI_PROJECT,1273,1273,884,20,0,6,0.8,Example-only multi-project pattern.
-S4_CHECKER_IMPROVEMENT,1273,1273,884,25,0,6,0.5,Hard-fail active orphan docs and print exact candidates.
-S5_PRODUCTION_DERIVED,1700,2700,1800,180,3,10,0.5,"Adds project registry, quick refs, and lane contracts."
-S6_CLEAN_SHEET_2_FILE,1782,1782,0,-120,-1,2,1.6,Merge router and state; loses conditional retrieval separation.
