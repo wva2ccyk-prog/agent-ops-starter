@@ -44,6 +44,15 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
 - **분기 1회**: AI에게 "OPERATING_PRINCIPLES의 Diet Protocol에 따라 삭제 후보를
   순위 목록으로만 제안해. 적용하지 마." → 훑어보고 승인한 것만 지우게 함.
 
+검사기는 `docs/` 아래의 등록되지 않은 Markdown도 기본적으로 FAIL 처리합니다.
+문서 이동 중 잠시 허용해야 할 때만 `--allow-orphans`(PowerShell은
+`-AllowOrphans`)를 명시하세요. 이 옵션은 고아 문서만 WARN으로 낮추며 다른 오류는
+그대로 실패합니다.
+
+`docs/`는 AI가 실제 검색 대상으로 취급하는 **active retrievable corpus**입니다.
+초안, 원시 로그, 보관본처럼 active retrieval에 참여하면 안 되는 자료는 검사기
+통과를 위해 억지로 등록하지 말고 `docs/` 밖에 두세요.
+
 ## 규칙을 추가하고 싶을 때 (가장 중요)
 
 추가하기 전에 `docs/OPERATING_PRINCIPLES.md`의 Intake Gate 세 질문을 통과해야
@@ -53,11 +62,12 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
 ## 커스터마이즈
 
 - 새 문서를 만들면 반드시 `docs/RETRIEVAL_MAP.md`에 한 줄 등록하세요.
-  등록 안 된 문서는 AI에게 존재하지 않는 문서입니다.
+  등록 안 된 문서는 AI에게 존재하지 않는 문서이며 월간 검사도 실패합니다.
 - 반복 작업(보고서 작성, 자료 정리 등)이 생기면 `docs/lanes/<작업명>/` 폴더를
   만들고 그 안에 작업 전용 규칙을 두세요. AGENTS.md에는 넣지 마세요.
 - 검사기는 두 판 모두 같은 항목을 검사합니다. 둘 중 편한 것을 쓰세요.
-  검사기가 제대로 작동하는지 확인하려면 `python3 tools/check_docs.py --self-test`.
+  자가검사는 `python3 tools/check_docs.py --self-test` 또는
+  `pwsh -NoProfile -File tools/check_docs.ps1 -SelfTest`로 실행합니다.
 
 ## Codex 선택 기능: ChatGPT 협업
 
@@ -126,6 +136,15 @@ It takes ten minutes.
   OPERATING_PRINCIPLES, propose deletion candidates as a ranked list only. Do
   not apply." → skim, approve, and let it delete only the approved items.
 
+By default the checkers also FAIL on any unregistered Markdown file under
+`docs/`. During an intentional migration only, pass `--allow-orphans`
+(PowerShell: `-AllowOrphans`). It downgrades only orphan docs to WARN; every
+other integrity error still fails.
+
+`docs/` is the **active retrievable corpus**. Drafts, raw logs, archives, and
+other material that should not participate in active retrieval belong outside
+`docs/`; do not register them merely to satisfy the checker.
+
 ## Before Adding Any Rule (the most important part)
 
 New rules must pass the three Intake Gate questions in
@@ -136,11 +155,12 @@ the principle.
 ## Customizing
 
 - Every new doc must get one row in `docs/RETRIEVAL_MAP.md`. An unregistered
-  doc does not exist for the AI.
+  doc does not exist for the AI and now fails the monthly check.
 - When a repeating task family emerges (reports, research, etc.), create
   `docs/lanes/<task>/` and keep task-specific rules there — not in AGENTS.md.
-- Both checkers run the same checks — use whichever fits your machine. To prove
-  the checker itself works: `python3 tools/check_docs.py --self-test`.
+- Both checkers run the same checks — use whichever fits your machine. Run
+  `python3 tools/check_docs.py --self-test` or
+  `pwsh -NoProfile -File tools/check_docs.ps1 -SelfTest` to prove detection.
 
 ## Optional Codex Feature: ChatGPT Collaboration
 
