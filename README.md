@@ -49,6 +49,10 @@ AI CLI(Codex, Claude Code, Gemini CLI 등)를 **몇 달 이상 무너지지 않�
 `-AllowOrphans`)를 명시하세요. 이 옵션은 고아 문서만 WARN으로 낮추며 다른 오류는
 그대로 실패합니다.
 
+`docs/`는 AI가 실제 검색 대상으로 취급하는 **active retrievable corpus**입니다.
+초안, 원시 로그, 보관본처럼 active retrieval에 참여하면 안 되는 자료는 검사기
+통과를 위해 억지로 등록하지 말고 `docs/` 밖에 두세요.
+
 ## 규칙을 추가하고 싶을 때 (가장 중요)
 
 추가하기 전에 `docs/OPERATING_PRINCIPLES.md`의 Intake Gate 세 질문을 통과해야
@@ -136,6 +140,10 @@ By default the checkers also FAIL on any unregistered Markdown file under
 `docs/`. During an intentional migration only, pass `--allow-orphans`
 (PowerShell: `-AllowOrphans`). It downgrades only orphan docs to WARN; every
 other integrity error still fails.
+
+`docs/` is the **active retrievable corpus**. Drafts, raw logs, archives, and
+other material that should not participate in active retrieval belong outside
+`docs/`; do not register them merely to satisfy the checker.
 
 ## Before Adding Any Rule (the most important part)
 
