@@ -5,11 +5,21 @@ param(
 )
 
 # Monthly integrity check for the starter kit docs. Read-only.
-# Default FAIL: missing router/map/targets, duplicate names/paths, unresolved
-# doc: tokens, and active Markdown files under docs/ that are absent from the
-# resolver. -AllowOrphans is an explicit migration-only downgrade to WARN.
+# Default FAIL: unsafe resolver paths that escape docs/, missing router/map/
+# targets, duplicate names/paths, unresolved doc: tokens, and active Markdown
+# files under docs/ that are absent from the resolver. -AllowOrphans is an
+# explicit migration-only downgrade to WARN for orphan docs only.
 
 $ErrorActionPreference = "Stop"
+
+function Normalize-ResolverPath([string]$Value) {
+  if ([string]::IsNullOrWhiteSpace($Value)) { return $null }
+  $normalized = $Value.Trim().Replace('\', '/')
+  if ($normalized.StartsWith('/') -or $normalized -match '^[A-Za-z]:') { return $null }
+  $parts = @($normalized.Split('/') | Where-Object { $_ -ne '' -and $_ -ne '.' })
+  if ($parts.Count -lt 2 -or $parts[0] -ne 'docs' -or $parts -contains '..') { return $null }
+  return ($parts -join '/')
+}
 
 function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
   $errors = @()
@@ -38,14 +48,21 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
   $seenName = @{}
   $seenPath = @{}
   foreach ($row in $rows) {
-    $abs = Join-Path $CheckRoot ($row.Path -replace '/', [IO.Path]::DirectorySeparatorChar)
-    if (-not (Test-Path -LiteralPath $abs)) {
-      $errors += "resolver row points to missing file: $($row.Name) -> $($row.Path)"
+    $safePath = Normalize-ResolverPath $row.Path
+    if (-not $safePath) {
+      $errors += "unsafe resolver path (must stay under docs/): $($row.Name) -> $($row.Path)"
+      $pathKey = $row.Path.Replace('\', '/')
+    } else {
+      $pathKey = $safePath
+      $abs = Join-Path $CheckRoot ($safePath -replace '/', [IO.Path]::DirectorySeparatorChar)
+      if (-not (Test-Path -LiteralPath $abs)) {
+        $errors += "resolver row points to missing file: $($row.Name) -> $safePath"
+      }
     }
     if ($seenName.ContainsKey($row.Name)) { $errors += "duplicate NAME: $($row.Name)" }
     else { $seenName[$row.Name] = $true }
-    if ($seenPath.ContainsKey($row.Path)) { $errors += "duplicate path: $($row.Path)" }
-    else { $seenPath[$row.Path] = $true }
+    if ($seenPath.ContainsKey($pathKey)) { $errors += "duplicate path: $pathKey" }
+    else { $seenPath[$pathKey] = $true }
   }
 
   $docsRoot = Join-Path $CheckRoot "docs"
@@ -95,9 +112,12 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
 }
 
 function Invoke-SelfTest {
-  $tmp = Join-Path ([IO.Path]::GetTempPath()) ("agent-ops-starter-check-" + [guid]::NewGuid().ToString("N"))
+  $sandbox = Join-Path ([IO.Path]::GetTempPath()) ("agent-ops-starter-check-" + [guid]::NewGuid().ToString("N"))
+  $tmp = Join-Path $sandbox "repo"
   try {
     New-Item -ItemType Directory -Force -Path (Join-Path $tmp "docs") | Out-Null
+    $outside = Join-Path $sandbox "outside.md"
+    Set-Content -LiteralPath $outside -Value "outside active corpus" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $tmp "AGENTS.md") -Value "router. see doc:GHOST" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $tmp "docs/REAL.md") -Value "real doc" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $tmp "docs/ORPHAN.md") -Value "not registered" -Encoding UTF8
@@ -106,6 +126,9 @@ REAL|docs/REAL.md|a real row
 GONE|docs/MISSING.md|points at nothing
 REAL|docs/OTHER.md|duplicate name
 OTHER|docs/REAL.md|duplicate path
+ESCAPE|../outside.md|existing file outside repository
+ABSOLUTE|$outside|existing absolute file outside repository
+DRIVE|C:\absolute\outside.md|drive-root path
 RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
 "@ | Set-Content -LiteralPath (Join-Path $tmp "docs/RETRIEVAL_MAP.md") -Encoding UTF8
 
@@ -121,6 +144,9 @@ RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
       "strict orphan error" = (@($strict.Errors | Where-Object { $_ -like '*ORPHAN.md*' }).Count -gt 0)
       "migration orphan warning" = ((@($migration.Warnings | Where-Object { $_ -like '*ORPHAN.md*' }).Count -gt 0) -and (@($migration.Errors | Where-Object { $_ -like '*ORPHAN.md*' }).Count -eq 0))
       "mode preserves other errors" = $migrationJoined.Contains("missing file: GONE")
+      "reject parent escape" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("ESCAPE -> ../outside.md"))
+      "reject absolute path" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("ABSOLUTE ->"))
+      "reject drive-root path" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("DRIVE -> C:"))
     }
     foreach ($entry in $expectations.GetEnumerator()) {
       Write-Host ("  [{0}] {1}" -f $(if ($entry.Value) { "OK" } else { "MISS" }), $entry.Key)
@@ -131,7 +157,7 @@ RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
     return ($missed.Count -eq 0)
   }
   finally {
-    if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force }
+    if (Test-Path -LiteralPath $sandbox) { Remove-Item -LiteralPath $sandbox -Recurse -Force }
   }
 }
 
