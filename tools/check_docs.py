@@ -2,10 +2,10 @@
 """Monthly integrity check for the starter kit docs. Read-only.
 
 Cross-platform twin of ``check_docs.ps1``. By default it fails on resolver rows
-that do not resolve, duplicate names/paths, unresolved ``doc:`` tokens, a
-missing router, and active Markdown files under ``docs/`` that are absent from
-the resolver. ``--allow-orphans`` is an explicit migration escape hatch that
-downgrades only the orphan condition to WARN.
+that escape the active ``docs/`` corpus or do not resolve, duplicate names/paths,
+unresolved ``doc:`` tokens, a missing router, and active Markdown files under
+``docs/`` that are absent from the resolver. ``--allow-orphans`` is an explicit
+migration escape hatch that downgrades only the orphan condition to WARN.
 
 Run:       python3 tools/check_docs.py
 Migration: python3 tools/check_docs.py --allow-orphans
@@ -16,10 +16,11 @@ from __future__ import annotations
 import argparse
 import re
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROW_RE = re.compile(r"^([A-Z0-9_]+)\|([^|]+)\|(.+)$")
 DOC_TOKEN_RE = re.compile(r"doc:([A-Z0-9_]+)")
+DRIVE_RE = re.compile(r"^[A-Za-z]:")
 ROUTER_MAX_BYTES = 4 * 1024
 DOC_MAX_BYTES = 15 * 1024
 
@@ -31,6 +32,20 @@ def parse_rows(map_text: str) -> list[tuple[str, str, str]]:
         if match:
             rows.append((match.group(1), match.group(2).strip(), match.group(3).strip()))
     return rows
+
+
+def normalize_resolver_path(rel: str) -> str | None:
+    """Return a canonical docs-local path, or None when the row can escape."""
+    normalized = rel.strip().replace("\\", "/")
+    if not normalized or normalized.startswith("/") or DRIVE_RE.match(normalized):
+        return None
+    parts = PurePosixPath(normalized).parts
+    if ".." in parts or not parts or parts[0] != "docs":
+        return None
+    canonical = PurePosixPath(*[part for part in parts if part not in ("", ".")]).as_posix()
+    if not canonical.startswith("docs/"):
+        return None
+    return canonical
 
 
 def check(root: Path, *, allow_orphans: bool = False) -> tuple[list[str], list[str], int, int]:
@@ -52,14 +67,20 @@ def check(root: Path, *, allow_orphans: bool = False) -> tuple[list[str], list[s
     seen_name: set[str] = set()
     seen_path: set[str] = set()
     for name, rel, _role in rows:
-        if not (root / rel).is_file():
-            errors.append(f"resolver row points to missing file: {name} -> {rel}")
+        safe_rel = normalize_resolver_path(rel)
+        if safe_rel is None:
+            errors.append(f"unsafe resolver path (must stay under docs/): {name} -> {rel}")
+        elif not (root / safe_rel).is_file():
+            errors.append(f"resolver row points to missing file: {name} -> {safe_rel}")
+
         if name in seen_name:
             errors.append(f"duplicate NAME: {name}")
         seen_name.add(name)
-        if rel in seen_path:
-            errors.append(f"duplicate path: {rel}")
-        seen_path.add(rel)
+
+        path_key = safe_rel if safe_rel is not None else rel.replace("\\", "/")
+        if path_key in seen_path:
+            errors.append(f"duplicate path: {path_key}")
+        seen_path.add(path_key)
 
     docs_root = root / "docs"
     doc_files = sorted(p for p in docs_root.rglob("*.md") if p.is_file()) if docs_root.is_dir() else []
@@ -106,16 +127,20 @@ def run(root: Path, *, allow_orphans: bool = False) -> int:
     return 0
 
 
-def make_broken_fixture(root: Path) -> None:
+def make_broken_fixture(root: Path, outside: Path) -> None:
     (root / "docs").mkdir()
     (root / "AGENTS.md").write_text("router. see doc:GHOST\n", encoding="utf-8")
     (root / "docs" / "REAL.md").write_text("real doc\n", encoding="utf-8")
     (root / "docs" / "ORPHAN.md").write_text("not registered\n", encoding="utf-8")
+    outside.write_text("outside active corpus\n", encoding="utf-8")
     (root / "docs" / "RETRIEVAL_MAP.md").write_text(
         "REAL|docs/REAL.md|a real row\n"
         "GONE|docs/MISSING.md|points at nothing\n"
         "REAL|docs/OTHER.md|duplicate name\n"
         "OTHER|docs/REAL.md|duplicate path\n"
+        "ESCAPE|../outside.md|existing file outside repository\n"
+        f"ABSOLUTE|{outside.resolve().as_posix()}|existing absolute file outside repository\n"
+        "DRIVE|C:\\absolute\\outside.md|drive-root path\n"
         "RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver\n",
         encoding="utf-8",
     )
@@ -123,8 +148,11 @@ def make_broken_fixture(root: Path) -> None:
 
 def self_test() -> int:
     with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        make_broken_fixture(root)
+        sandbox = Path(tmp)
+        root = sandbox / "repo"
+        root.mkdir()
+        outside = sandbox / "outside.md"
+        make_broken_fixture(root, outside)
         errors, warnings, _, _ = check(root)
         joined = " | ".join(errors + warnings)
         migration_errors, migration_warnings, _, _ = check(root, allow_orphans=True)
@@ -138,6 +166,9 @@ def self_test() -> int:
             "migration orphan warning": any("ORPHAN.md" in item for item in migration_warnings)
             and not any("ORPHAN.md" in item for item in migration_errors),
             "mode preserves other errors": "missing file: GONE" in migration_joined,
+            "reject parent escape": "unsafe resolver path" in joined and "ESCAPE -> ../outside.md" in joined,
+            "reject absolute path": "unsafe resolver path" in joined and "ABSOLUTE ->" in joined,
+            "reject drive-root path": "unsafe resolver path" in joined and "DRIVE -> C:" in joined,
         }
         for label, fired in expectations.items():
             print(f"  [{'OK' if fired else 'MISS'}] {label}")
