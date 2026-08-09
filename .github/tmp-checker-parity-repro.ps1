@@ -25,14 +25,17 @@ $root2 = Join-Path $sandbox2 'repo'
 New-Item -ItemType Directory -Force -Path (Join-Path $root2 'docs') | Out-Null
 Set-Content -LiteralPath (Join-Path $root2 'AGENTS.md') -Value 'router' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $root2 'docs\REAL.md') -Value 'real' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $root2 'docs\OTHER.md') -Value 'other' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $root2 'docs\RETRIEVAL_MAP.md') -Value @(
   '# Retrieval Map',
   '',
   '## Resolver Table',
   'REAL|docs/REAL.md|valid',
   'BROKEN_TOO_FEW|docs/REAL.md',
-  'BROKEN_TOO_MANY|docs/REAL.md|role|extra',
-  'RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|resolver'
+  'BROKEN_TOO_MANY|docs/OTHER.md|role|extra',
+  'RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|resolver',
+  '',
+  '## Rules For This File'
 ) -Encoding UTF8
 python tools/check_docs.py --root $root2
 $pyMalformed = $LASTEXITCODE
