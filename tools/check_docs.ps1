@@ -5,10 +5,10 @@ param(
 )
 
 # Monthly integrity check for the starter kit docs. Read-only.
-# Default FAIL: unsafe resolver paths that escape docs/, missing router/map/
-# targets, duplicate names/paths, unresolved doc: tokens, and active Markdown
-# files under docs/ that are absent from the resolver. -AllowOrphans is an
-# explicit migration-only downgrade to WARN for orphan docs only.
+# Default FAIL: malformed resolver-table rows; unsafe resolver paths that escape
+# docs/; missing router/map/file targets; duplicate names/paths; unresolved
+# doc: tokens; and active Markdown files under docs/ absent from the resolver.
+# -AllowOrphans is an explicit migration-only downgrade to WARN for orphan docs.
 
 $ErrorActionPreference = "Stop"
 
@@ -27,22 +27,43 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
   $mapPath = Join-Path (Join-Path $CheckRoot "docs") "RETRIEVAL_MAP.md"
   $routerPath = Join-Path $CheckRoot "AGENTS.md"
 
-  if (-not (Test-Path -LiteralPath $routerPath)) { $errors += "AGENTS.md missing" }
-  if (-not (Test-Path -LiteralPath $mapPath)) {
+  if (-not (Test-Path -LiteralPath $routerPath -PathType Leaf)) { $errors += "AGENTS.md missing" }
+  if (-not (Test-Path -LiteralPath $mapPath -PathType Leaf)) {
     $errors += "docs/RETRIEVAL_MAP.md missing"
     return [pscustomobject]@{ Errors=$errors; Warnings=$warnings; RowCount=0; DocCount=0 }
   }
 
   $rows = @()
-  foreach ($line in (Get-Content -LiteralPath $mapPath)) {
-    if ($line -match '^([A-Z0-9_]+)\|([^|]+)\|(.+)$') {
+  $inResolverTable = $false
+  $sawResolverTable = $false
+  $lineNo = 0
+  foreach ($rawLine in (Get-Content -LiteralPath $mapPath)) {
+    $lineNo++
+    $line = $rawLine.Trim()
+    if ($line -eq '## Resolver Table') {
+      $inResolverTable = $true
+      $sawResolverTable = $true
+      continue
+    }
+    if ($inResolverTable -and $line -match '^##\s+') { break }
+    if (-not $inResolverTable -or [string]::IsNullOrWhiteSpace($line)) { continue }
+    if ($line -match '^([A-Z0-9_]+)\|([^|]+)\|([^|]+)$') {
+      $pathValue = $Matches[2].Trim()
+      $roleValue = $Matches[3].Trim()
+      if (-not $pathValue -or -not $roleValue) {
+        $errors += "malformed resolver row at line ${lineNo}: $line"
+        continue
+      }
       $rows += [pscustomobject]@{
         Name = $Matches[1]
-        Path = $Matches[2].Trim()
-        Role = $Matches[3].Trim()
+        Path = $pathValue
+        Role = $roleValue
       }
+    } else {
+      $errors += "malformed resolver row at line ${lineNo}: $line"
     }
   }
+  if (-not $sawResolverTable) { $errors += "resolver table heading missing: ## Resolver Table" }
   if ($rows.Count -eq 0) { $errors += "no resolver rows found in RETRIEVAL_MAP.md" }
 
   $seenName = @{}
@@ -55,7 +76,7 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
     } else {
       $pathKey = $safePath
       $abs = Join-Path $CheckRoot ($safePath -replace '/', [IO.Path]::DirectorySeparatorChar)
-      if (-not (Test-Path -LiteralPath $abs)) {
+      if (-not (Test-Path -LiteralPath $abs -PathType Leaf)) {
         $errors += "resolver row points to missing file: $($row.Name) -> $safePath"
       }
     }
@@ -79,7 +100,7 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
   }
 
   $scanFiles = @()
-  if (Test-Path -LiteralPath $routerPath) { $scanFiles += Get-Item -LiteralPath $routerPath }
+  if (Test-Path -LiteralPath $routerPath -PathType Leaf) { $scanFiles += Get-Item -LiteralPath $routerPath }
   $scanFiles += $docFiles
   foreach ($file in $scanFiles) {
     $text = Get-Content -LiteralPath $file.FullName -Raw
@@ -91,7 +112,7 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
     }
   }
 
-  if (Test-Path -LiteralPath $routerPath) {
+  if (Test-Path -LiteralPath $routerPath -PathType Leaf) {
     $router = Get-Item -LiteralPath $routerPath
     if ($router.Length -gt 4KB) {
       $warnings += "AGENTS.md over 4KB ($([math]::Round($router.Length/1KB,1))KB) - it should route, not legislate"
@@ -116,20 +137,29 @@ function Invoke-SelfTest {
   $tmp = Join-Path $sandbox "repo"
   try {
     New-Item -ItemType Directory -Force -Path (Join-Path $tmp "docs") | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $tmp "docs/DIR_TARGET") | Out-Null
     $outside = Join-Path $sandbox "outside.md"
     Set-Content -LiteralPath $outside -Value "outside active corpus" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $tmp "AGENTS.md") -Value "router. see doc:GHOST" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $tmp "docs/REAL.md") -Value "real doc" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $tmp "docs/ORPHAN.md") -Value "not registered" -Encoding UTF8
     @"
+# Retrieval Map
+
+## Resolver Table
 REAL|docs/REAL.md|a real row
 GONE|docs/MISSING.md|points at nothing
 REAL|docs/OTHER.md|duplicate name
 OTHER|docs/REAL.md|duplicate path
+DIRECTORY|docs/DIR_TARGET|directory is not a file target
 ESCAPE|../outside.md|existing file outside repository
 ABSOLUTE|$outside|existing absolute file outside repository
 DRIVE|C:\absolute\outside.md|drive-root path
+BROKEN_TOO_FEW|docs/REAL.md
+BROKEN_TOO_MANY|docs/REAL.md|role|extra
 RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
+
+## Rules For This File
 "@ | Set-Content -LiteralPath (Join-Path $tmp "docs/RETRIEVAL_MAP.md") -Encoding UTF8
 
     $strict = Invoke-DocsCheck $tmp $false
@@ -138,12 +168,15 @@ RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
     $migrationJoined = (@($migration.Errors) + @($migration.Warnings)) -join " | "
     $expectations = [ordered]@{
       "missing file" = $joined.Contains("missing file: GONE")
+      "directory target" = $joined.Contains("missing file: DIRECTORY")
+      "malformed too few" = ($joined.Contains("malformed resolver row") -and $joined.Contains("BROKEN_TOO_FEW"))
+      "malformed too many" = ($joined.Contains("malformed resolver row") -and $joined.Contains("BROKEN_TOO_MANY"))
       "duplicate NAME" = $joined.Contains("duplicate NAME: REAL")
       "duplicate path" = $joined.Contains("duplicate path: docs/REAL.md")
       "unresolved doc token" = $joined.Contains("unresolved doc token doc:GHOST")
       "strict orphan error" = (@($strict.Errors | Where-Object { $_ -like '*ORPHAN.md*' }).Count -gt 0)
       "migration orphan warning" = ((@($migration.Warnings | Where-Object { $_ -like '*ORPHAN.md*' }).Count -gt 0) -and (@($migration.Errors | Where-Object { $_ -like '*ORPHAN.md*' }).Count -eq 0))
-      "mode preserves other errors" = $migrationJoined.Contains("missing file: GONE")
+      "mode preserves other errors" = ($migrationJoined.Contains("missing file: GONE") -and $migrationJoined.Contains("BROKEN_TOO_FEW"))
       "reject parent escape" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("ESCAPE -> ../outside.md"))
       "reject absolute path" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("ABSOLUTE ->"))
       "reject drive-root path" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("DRIVE -> C:"))
