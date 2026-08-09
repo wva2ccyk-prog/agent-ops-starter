@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Monthly integrity check for the starter kit docs. Read-only.
 
-Cross-platform twin of ``check_docs.ps1``. By default it fails on resolver rows
-that escape the active ``docs/`` corpus or do not resolve, duplicate names/paths,
-unresolved ``doc:`` tokens, a missing router, and active Markdown files under
-``docs/`` that are absent from the resolver. ``--allow-orphans`` is an explicit
-migration escape hatch that downgrades only the orphan condition to WARN.
+Cross-platform twin of ``check_docs.ps1``. By default it fails on malformed
+resolver-table rows, resolver rows that escape the active ``docs/`` corpus or
+do not resolve to files, duplicate names/paths, unresolved ``doc:`` tokens, a
+missing router, and active Markdown files under ``docs/`` that are absent from
+the resolver. ``--allow-orphans`` is an explicit migration escape hatch that
+downgrades only the orphan condition to WARN.
 
 Run:       python3 tools/check_docs.py
 Migration: python3 tools/check_docs.py --allow-orphans
@@ -18,20 +19,47 @@ import re
 import tempfile
 from pathlib import Path, PurePosixPath
 
-ROW_RE = re.compile(r"^([A-Z0-9_]+)\|([^|]+)\|(.+)$")
+ROW_RE = re.compile(r"^([A-Z0-9_]+)\|([^|]+)\|([^|]+)$")
 DOC_TOKEN_RE = re.compile(r"doc:([A-Z0-9_]+)")
 DRIVE_RE = re.compile(r"^[A-Za-z]:")
 ROUTER_MAX_BYTES = 4 * 1024
 DOC_MAX_BYTES = 15 * 1024
+RESOLVER_TABLE_HEADING = "## Resolver Table"
+
+
+def parse_resolver_table(map_text: str) -> tuple[list[tuple[str, str, str]], list[str]]:
+    """Parse only the resolver table and report malformed nonblank table rows."""
+    rows: list[tuple[str, str, str]] = []
+    errors: list[str] = []
+    in_table = False
+    saw_table = False
+    for line_no, raw in enumerate(map_text.splitlines(), 1):
+        line = raw.strip()
+        if line == RESOLVER_TABLE_HEADING:
+            in_table = True
+            saw_table = True
+            continue
+        if in_table and line.startswith("## "):
+            break
+        if not in_table or not line:
+            continue
+        match = ROW_RE.fullmatch(line)
+        if not match:
+            errors.append(f"malformed resolver row at line {line_no}: {line}")
+            continue
+        name, rel, role = match.group(1), match.group(2).strip(), match.group(3).strip()
+        if not rel or not role:
+            errors.append(f"malformed resolver row at line {line_no}: {line}")
+            continue
+        rows.append((name, rel, role))
+    if not saw_table:
+        errors.append(f"resolver table heading missing: {RESOLVER_TABLE_HEADING}")
+    return rows, errors
 
 
 def parse_rows(map_text: str) -> list[tuple[str, str, str]]:
-    rows = []
-    for line in map_text.splitlines():
-        match = ROW_RE.match(line.strip())
-        if match:
-            rows.append((match.group(1), match.group(2).strip(), match.group(3).strip()))
-    return rows
+    """Compatibility helper returning only valid resolver-table rows."""
+    return parse_resolver_table(map_text)[0]
 
 
 def normalize_resolver_path(rel: str) -> str | None:
@@ -60,7 +88,8 @@ def check(root: Path, *, allow_orphans: bool = False) -> tuple[list[str], list[s
     if not map_path.is_file():
         return errors + ["docs/RETRIEVAL_MAP.md missing"], warnings, 0, 0
 
-    rows = parse_rows(map_path.read_text(encoding="utf-8", errors="replace"))
+    rows, parse_errors = parse_resolver_table(map_path.read_text(encoding="utf-8", errors="replace"))
+    errors.extend(parse_errors)
     if not rows:
         errors.append("no resolver rows found in RETRIEVAL_MAP.md")
 
@@ -129,19 +158,26 @@ def run(root: Path, *, allow_orphans: bool = False) -> int:
 
 def make_broken_fixture(root: Path, outside: Path) -> None:
     (root / "docs").mkdir()
+    (root / "docs" / "DIR_TARGET").mkdir()
     (root / "AGENTS.md").write_text("router. see doc:GHOST\n", encoding="utf-8")
     (root / "docs" / "REAL.md").write_text("real doc\n", encoding="utf-8")
     (root / "docs" / "ORPHAN.md").write_text("not registered\n", encoding="utf-8")
     outside.write_text("outside active corpus\n", encoding="utf-8")
     (root / "docs" / "RETRIEVAL_MAP.md").write_text(
+        "# Retrieval Map\n\n"
+        "## Resolver Table\n"
         "REAL|docs/REAL.md|a real row\n"
         "GONE|docs/MISSING.md|points at nothing\n"
         "REAL|docs/OTHER.md|duplicate name\n"
         "OTHER|docs/REAL.md|duplicate path\n"
+        "DIRECTORY|docs/DIR_TARGET|directory is not a file target\n"
         "ESCAPE|../outside.md|existing file outside repository\n"
         f"ABSOLUTE|{outside.resolve().as_posix()}|existing absolute file outside repository\n"
         "DRIVE|C:\\absolute\\outside.md|drive-root path\n"
-        "RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver\n",
+        "BROKEN_TOO_FEW|docs/REAL.md\n"
+        "BROKEN_TOO_MANY|docs/REAL.md|role|extra\n"
+        "RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver\n\n"
+        "## Rules For This File\n",
         encoding="utf-8",
     )
 
@@ -159,13 +195,17 @@ def self_test() -> int:
         migration_joined = " | ".join(migration_errors + migration_warnings)
         expectations = {
             "missing file": "missing file: GONE" in joined,
+            "directory target": "missing file: DIRECTORY" in joined,
+            "malformed too few": "malformed resolver row" in joined and "BROKEN_TOO_FEW" in joined,
+            "malformed too many": "malformed resolver row" in joined and "BROKEN_TOO_MANY" in joined,
             "duplicate NAME": "duplicate NAME: REAL" in joined,
             "duplicate path": "duplicate path: docs/REAL.md" in joined,
             "unresolved doc token": "unresolved doc token doc:GHOST" in joined,
             "strict orphan error": any("ORPHAN.md" in item for item in errors),
             "migration orphan warning": any("ORPHAN.md" in item for item in migration_warnings)
             and not any("ORPHAN.md" in item for item in migration_errors),
-            "mode preserves other errors": "missing file: GONE" in migration_joined,
+            "mode preserves other errors": "missing file: GONE" in migration_joined
+            and "BROKEN_TOO_FEW" in migration_joined,
             "reject parent escape": "unsafe resolver path" in joined and "ESCAPE -> ../outside.md" in joined,
             "reject absolute path": "unsafe resolver path" in joined and "ABSOLUTE ->" in joined,
             "reject drive-root path": "unsafe resolver path" in joined and "DRIVE -> C:" in joined,
