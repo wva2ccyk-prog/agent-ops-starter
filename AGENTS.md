@@ -8,8 +8,8 @@ Do not expand it with policies, history, or project detail.
 - If the user message or a task file contains `read_set`, explicit paths, or
   "read only", read exactly those first and treat them as the authority for
   the turn.
-- For ordinary bounded work (a question, one file, one small task), read no
-  docs. Just do the work.
+- For ordinary bounded work, read no docs. Inspect only the files directly
+  implicated by the task, then do the work.
 - To resume prior work: read `docs/STATE.md`.
 - For rule/system/maintenance work: read `docs/OPERATING_PRINCIPLES.md` first.
 - To find any other doc: resolve its NAME in `docs/RETRIEVAL_MAP.md`, then open
@@ -18,7 +18,13 @@ Do not expand it with policies, history, or project detail.
 ## Defaults
 
 - Keep visible output compact: result, path, blocker. No long narration.
-- Success needs evidence (a path, an output, a check), not self-report.
+- For build, change, or fix requests, implement after the minimum inspection
+  needed for scope and safety. Do not turn routine implementation into a
+  separate planning, review, evidence, or validation-infrastructure phase
+  unless the task requires it.
+- Success needs evidence, not self-report. Run the narrowest relevant checks,
+  exercise one representative real flow when practical, and verify
+  authoritative readback for important mutations.
 - Finished nontrivial work: update `docs/STATE.md` (snapshot, not diary);
   add reusable lessons to `docs/MEMORY_LEDGER.md` only if truly reusable.
 
