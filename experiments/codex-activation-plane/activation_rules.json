@@ -2,24 +2,179 @@
   "version": 1,
   "max_refs": 2,
   "activation_rules": [
-    {"id":"ops.system-maintenance","priority":100,"refs":["doc:OPERATING_PRINCIPLES"],"prompt_any":["\\b(?:rule|policy|system|maintenance|operating principle)\\b.{0,24}\\b(?:change|edit|add|remove|review|maintain)\\b","(?:규칙|정책|시스템|운영 원칙|운영규칙|유지보수).{0,24}(?:바꿔|수정|추가|삭제|검토|정리)"]},
-    {"id":"ops.boundary-action","priority":95,"refs":["doc:OPERATING_PRINCIPLES"],"prompt_any":["(?:PR|pull request|issue|comment|release).{0,20}(?:create|open|post|submit|merge|update|delete)","(?:PR|이슈|댓글|릴리스).{0,16}(?:올려|만들|생성|등록|병합|머지|수정|삭제)","(?:send|forward|publish|deploy|buy|purchase|pay|delete|overwrite).{0,24}(?:email|mail|message|document|site|production|file|folder|order)?","(?:메일|메시지|문서|사이트|파일|폴더|구매|결제|주문).{0,20}(?:보내|전송|공개|게시|배포|삭제|덮어써|결제|구매|주문)"]},
-    {"id":"ops.resume","priority":80,"refs":["doc:STATE"],"prompt_any":["\\b(?:resume|continue prior work|pick up where we left off)\\b","(?:이어서 해|계속해|지난 작업 이어|중단한 작업 재개)"]},
-    {"id":"ops.memory","priority":70,"refs":["doc:MEMORY_LEDGER"],"prompt_any":["\\b(?:remember this|save this lesson|reusable lesson|memory ledger)\\b","(?:기억해|교훈으로 저장|재사용할 교훈|메모리 레저|메모리 원장)"]},
-    {"id":"ops.handoff","priority":60,"refs":["doc:HANDOFF_TEMPLATE"],"prompt_any":["\\b(?:handoff|work packet)\\b","(?:핸드오프|작업 패킷)"]}
+    {
+      "id": "ops.system-maintenance",
+      "priority": 100,
+      "refs": [
+        "doc:OPERATING_PRINCIPLES"
+      ],
+      "prompt_any": [
+        "\\b(?:rule|policy|system|maintenance|operating principle)\\b.{0,24}\\b(?:change|edit|add|remove|review|maintain)\\b",
+        "(?:규칙|정책|시스템|운영 원칙|운영규칙|유지보수).{0,24}(?:바꿔|수정|추가|삭제|검토|정리)"
+      ]
+    },
+    {
+      "id": "ops.boundary-action",
+      "priority": 95,
+      "refs": [
+        "doc:OPERATING_PRINCIPLES"
+      ],
+      "prompt_any": [
+        "(?:PR|pull request|issue|comment|release).{0,20}(?:create|open|post|submit|merge|update|delete)",
+        "(?:PR|이슈|댓글|릴리스).{0,16}(?:올려|만들|생성|등록|병합|머지|수정|삭제)",
+        "(?:send|forward|publish|deploy|buy|purchase|pay|delete|overwrite).{0,24}(?:email|mail|message|document|site|production|file|folder|order)?",
+        "(?:메일|메시지|문서|사이트|파일|폴더|구매|결제|주문).{0,20}(?:보내|전송|공개|게시|배포|삭제|덮어써|결제|구매|주문)"
+      ]
+    },
+    {
+      "id": "ops.resume",
+      "priority": 80,
+      "refs": [
+        "doc:STATE"
+      ],
+      "prompt_any": [
+        "\\b(?:resume|continue prior work|pick up where we left off)\\b",
+        "(?:이어서 해|계속해|지난 작업 이어|중단한 작업 재개)"
+      ]
+    },
+    {
+      "id": "ops.memory",
+      "priority": 70,
+      "refs": [
+        "doc:MEMORY_LEDGER"
+      ],
+      "prompt_any": [
+        "\\b(?:remember this|save this lesson|reusable lesson|memory ledger)\\b",
+        "(?:기억해|교훈으로 저장|재사용할 교훈|메모리 레저|메모리 원장)"
+      ]
+    },
+    {
+      "id": "ops.handoff",
+      "priority": 60,
+      "refs": [
+        "doc:HANDOFF_TEMPLATE"
+      ],
+      "prompt_any": [
+        "\\b(?:handoff|work packet)\\b",
+        "(?:핸드오프|작업 패킷)"
+      ]
+    }
   ],
   "approval_rules": [
-    {"category":"external_write","prompt_any":["(?:PR|pull request|issue|comment|release).{0,24}(?:create|open|post|submit|merge|update|delete)","(?:create|open|post|submit|merge|update|delete).{0,24}(?:PR|pull request|issue|comment|release)","(?:PR|이슈|댓글|릴리스).{0,18}(?:올려|만들|생성|등록|병합|머지|수정|삭제)","(?:올려|만들|생성|등록|병합|머지|수정|삭제).{0,18}(?:PR|이슈|댓글|릴리스)","(?:send|forward|publish|deploy).{0,24}(?:email|mail|message|document|site|production)","(?:메일|메시지|문서|사이트|운영|프로덕션).{0,20}(?:보내|전송|공개|게시|배포)"],"prompt_none":["(?:how to|how do|what if|should I|can I|explain|show me|방법|어떻게|설명|무슨 내용|분석해|검토만|가능해|해도 될까).{0,24}(?:PR|pull request|issue|comment|review|release|send|publish|deploy|올려|이슈|댓글|리뷰|배포|보내)"]},
-    {"category":"destructive","prompt_any":["(?:please\\s+)?(?:delete|remove|erase|purge|drop|overwrite)\\s+(?:the\\s+|this\\s+|that\\s+|these\\s+|those\\s+)?(?:file|folder|branch|database|table|history|cache|existing|old|temp|temporary|it|them|[A-Za-z0-9_./\\\\-]+)","(?:run|execute|do)\\s+(?:git\\s+reset\\s+--hard|git\\s+clean\\s+-[^\\s]+|force[- ]?push)","(?:파일|폴더|브랜치|DB|데이터베이스|테이블|기존|캐시|임시|이전).{0,18}(?:삭제해|삭제해줘|지워줘|제거해|제거해줘|덮어써|초기화해|폐기해)","(?:삭제해|삭제해줘|지워줘|제거해|제거해줘|덮어써|초기화해|폐기해).{0,18}(?:파일|폴더|브랜치|DB|데이터베이스|테이블|기존|캐시|임시|이전)?","(?:강제 푸시|force[- ]?push|reset --hard).{0,12}(?:해|해줘|실행|run|execute)"],"prompt_none":["(?:what if|should I|can I|explain|how to|방법|어떻게|설명|해도 될까|하면 어떻게).{0,24}(?:delete|remove|삭제|제거|force|강제|reset)"]},
-    {"category":"spend","prompt_any":["(?:please\\s+)?(?:buy|purchase|pay for|checkout|subscribe to|place (?:the )?order for|charge)\\s+(?:this|that|it|the\\s+)?","(?:이걸|이거|상품|제품|서비스|구독|주문).{0,16}(?:구매해|구매해줘|결제해|결제해줘|주문해|주문해줘|구독해|구독해줘)","(?:구매해|구매해줘|결제해|결제해줘|주문해|주문해줘|구독해|구독해줘).{0,16}(?:이걸|이거|상품|제품|서비스)?"],"prompt_none":["(?:should I|can I|worth|compare|estimate|price|cost|살까|사도 될까|구매해도 될까|가격|비용|비교|견적).{0,24}(?:buy|purchase|구매|결제|주문)?"]},
-    {"category":"private_egress","prompt_all":["(?:secret|token|api[_ -]?key|password|private key|credential|confidential|private data|개인정보|비공개|기밀|토큰|키|비밀번호|자격증명)","(?:(?:please\\s+)?(?:send|upload|share|post|publish|forward)\\s+(?:this|that|it|the\\s+)?|(?:보내줘|전송해줘|업로드해줘|공유해줘|게시해줘|보내|전송해|업로드해|공유해|게시해))"],"prompt_none":["(?:should I|can I|what if|해도 될까|보내도 될까|공유해도 될까|업로드해도 될까)"]}
+    {
+      "category": "external_write",
+      "prompt_any": [
+        "(?:PR|pull request|issue|comment|release).{0,24}(?:create|open|post|submit|merge|update|delete)",
+        "(?:create|open|post|submit|merge|update|delete).{0,24}(?:PR|pull request|issue|comment|release)",
+        "(?:PR|이슈|댓글|릴리스).{0,18}(?:올려|만들|생성|등록|병합|머지|수정|삭제)",
+        "(?:올려|만들|생성|등록|병합|머지|수정|삭제).{0,18}(?:PR|이슈|댓글|릴리스)",
+        "(?:send|forward|publish|deploy).{0,24}(?:email|mail|message|document|site|production)",
+        "(?:메일|메시지|문서|사이트|운영|프로덕션).{0,20}(?:보내|전송|공개|게시|배포)"
+      ],
+      "prompt_none": [
+        "(?:how to|how do|what if|should I|can I|explain|show me|방법|어떻게|설명|무슨 내용|분석해|검토만|가능해|해도 될까).{0,24}(?:PR|pull request|issue|comment|review|release|send|publish|deploy|올려|이슈|댓글|리뷰|배포|보내)"
+      ]
+    },
+    {
+      "category": "destructive",
+      "prompt_any": [
+        "(?:please\\s+)?(?:delete|remove|erase|purge|drop|overwrite)\\s+(?:the\\s+|this\\s+|that\\s+|these\\s+|those\\s+)?(?:file|folder|branch|database|table|history|cache|existing|old|temp|temporary|it|them|[A-Za-z0-9_./\\\\-]+)",
+        "(?:run|execute|do)\\s+(?:git\\s+reset\\s+--hard|git\\s+clean\\s+-[^\\s]+|force[- ]?push)",
+        "(?:파일|폴더|브랜치|DB|데이터베이스|테이블|기존|캐시|임시|이전).{0,18}(?:삭제해|삭제해줘|지워줘|제거해|제거해줘|덮어써|초기화해|폐기해)",
+        "(?:삭제해|삭제해줘|지워줘|제거해|제거해줘|덮어써|초기화해|폐기해).{0,18}(?:파일|폴더|브랜치|DB|데이터베이스|테이블|기존|캐시|임시|이전)?",
+        "(?:강제 푸시|force[- ]?push|reset --hard).{0,12}(?:해|해줘|실행|run|execute)"
+      ],
+      "prompt_none": [
+        "(?:what if|should I|can I|explain|how to|방법|어떻게|설명|해도 될까|하면 어떻게).{0,24}(?:delete|remove|삭제|제거|force|강제|reset)"
+      ]
+    },
+    {
+      "category": "spend",
+      "prompt_any": [
+        "(?:please\\s+)?(?:buy|purchase|pay for|checkout|subscribe to|place (?:the )?order for|charge)\\s+(?:this|that|it|the\\s+)?",
+        "(?:이걸|이거|상품|제품|서비스|구독|주문).{0,16}(?:구매해|구매해줘|결제해|결제해줘|주문해|주문해줘|구독해|구독해줘)",
+        "(?:구매해|구매해줘|결제해|결제해줘|주문해|주문해줘|구독해|구독해줘).{0,16}(?:이걸|이거|상품|제품|서비스)?"
+      ],
+      "prompt_none": [
+        "(?:should I|can I|worth|compare|estimate|price|cost|살까|사도 될까|구매해도 될까|가격|비용|비교|견적).{0,24}(?:buy|purchase|구매|결제|주문)?"
+      ]
+    },
+    {
+      "category": "private_egress",
+      "prompt_all": [
+        "(?:secret|token|api[_ -]?key|password|private key|credential|confidential|private data|개인정보|비공개|기밀|토큰|키|비밀번호|자격증명)",
+        "(?:(?:please\\s+)?(?:send|upload|share|post|publish|forward)\\s+(?:this|that|it|the\\s+)?|(?:보내줘|전송해줘|업로드해줘|공유해줘|게시해줘|보내|전송해|업로드해|공유해|게시해))"
+      ],
+      "prompt_none": [
+        "(?:should I|can I|what if|해도 될까|보내도 될까|공유해도 될까|업로드해도 될까)"
+      ]
+    }
   ],
   "guard_rules": [
-    {"id":"remote.write-api","category":"external_write","priority":120,"tool_name_any":["(?i)(?:github|gitlab|gmail|mail|slack|teams|calendar|notion|jira|confluence|drive|dropbox|linear|discord|webhook).*(?:create|send|forward|post|publish|merge|update|delete|comment|review|invite|upload|share|release|dispatch)","(?i)^(?:create_pull_request|create_issue|merge_pull_request|add_comment|update_issue|update_pull_request|send_email|forward_email|send_message|create_event|update_event|publish|deploy|release)$"]},
-    {"id":"shell.remote-mutation","category":"external_write","priority":110,"tool_name_any":["(?i)(?:shell|exec|terminal|powershell|bash|zsh|command)"],"input_any":["(?i)\\bgit\\s+push\\b","(?i)\\bgh\\s+(?:pr|issue|release)\\s+(?:create|comment|edit|close|merge|delete|upload)\\b","(?i)\\b(?:deploy|publish|release)\\b"]},
-    {"id":"shell.destructive","category":"destructive","priority":130,"tool_name_any":["(?i)(?:shell|exec|terminal|powershell|bash|zsh|command)"],"input_any":["(?i)\\brm\\s+-[^\\n]*r[^\\n]*f|\\brm\\s+-[^\\n]*f[^\\n]*r","(?i)\\bRemove-Item\\b[^\\n]*(?:-Recurse|-Force)","(?i)\\bgit\\s+reset\\s+--hard\\b","(?i)\\bgit\\s+clean\\s+-[^\\s]*f","(?i)\\bgit\\s+push\\b[^\\n]*(?:--force|-f\\b)","(?i)\\b(?:DROP\\s+(?:TABLE|DATABASE)|TRUNCATE\\s+TABLE)\\b"]},
-    {"id":"remote.delete-api","category":"destructive","priority":125,"tool_name_any":["(?i)(?:github|gitlab|drive|dropbox|notion|jira|calendar|mail|gmail|slack|teams).*(?:delete|remove|trash|destroy|purge)"]},
-    {"id":"commerce.commit","category":"spend","priority":140,"tool_name_any":["(?i).*(?:purchase|checkout|place_order|submit_order|buy|subscribe|payment|charge).*"]},
-    {"id":"remote.private-egress","category":"private_egress","priority":150,"tool_name_any":["(?i)(?:github|gitlab|gmail|mail|slack|teams|calendar|notion|jira|confluence|drive|dropbox|linear|discord|webhook|upload|send|share|publish|post).*"],"input_any":["(?i)(?:api[_ -]?key|\\btoken\\b|access[_ -]?token|refresh[_ -]?token|password|passwd|private[_ -]?key|credential|client[_ -]?secret|authorization|bearer\\s+[A-Za-z0-9._-]+|BEGIN [A-Z ]*PRIVATE KEY|\\.env\\b|confidential|기밀|비공개|개인정보|비밀번호|토큰|자격증명)"]}
+    {
+      "id": "remote.write-api",
+      "category": "external_write",
+      "priority": 120,
+      "tool_name_any": [
+        "(?i)(?:github|gitlab|gmail|mail|slack|teams|calendar|notion|jira|confluence|drive|dropbox|linear|discord|webhook).*(?:create|send|forward|post|publish|merge|update|delete|comment|review|invite|upload|share|release|dispatch)",
+        "(?i)^(?:create_pull_request|create_issue|merge_pull_request|add_comment|update_issue|update_pull_request|send_email|forward_email|send_message|create_event|update_event|publish|deploy|release)$"
+      ]
+    },
+    {
+      "id": "shell.remote-mutation",
+      "category": "external_write",
+      "priority": 110,
+      "tool_name_any": [
+        "(?i)(?:shell|exec|terminal|powershell|bash|zsh|command)"
+      ],
+      "input_any": [
+        "(?i)\\bgit\\s+push\\b",
+        "(?i)\\bgh\\s+(?:pr|issue|release)\\s+(?:create|comment|edit|close|merge|delete|upload)\\b",
+        "(?i)\\b(?:deploy|publish|release)\\b"
+      ]
+    },
+    {
+      "id": "shell.destructive",
+      "category": "destructive",
+      "priority": 130,
+      "tool_name_any": [
+        "(?i)(?:shell|exec|terminal|powershell|bash|zsh|command)"
+      ],
+      "input_any": [
+        "(?i)\\brm\\s+-[^\\n]*r[^\\n]*f|\\brm\\s+-[^\\n]*f[^\\n]*r",
+        "(?i)\\bRemove-Item\\b[^\\n]*(?:-Recurse|-Force)",
+        "(?i)\\bgit\\s+reset\\s+--hard\\b",
+        "(?i)\\bgit\\s+clean\\s+-[^\\s]*f",
+        "(?i)\\bgit\\s+push\\b[^\\n]*(?:--force|-f\\b)",
+        "(?i)\\b(?:DROP\\s+(?:TABLE|DATABASE)|TRUNCATE\\s+TABLE)\\b"
+      ]
+    },
+    {
+      "id": "remote.delete-api",
+      "category": "destructive",
+      "priority": 125,
+      "tool_name_any": [
+        "(?i)(?:github|gitlab|drive|dropbox|notion|jira|calendar|mail|gmail|slack|teams).*(?:delete|remove|trash|destroy|purge)"
+      ]
+    },
+    {
+      "id": "commerce.commit",
+      "category": "spend",
+      "priority": 140,
+      "tool_name_any": [
+        "(?i).*(?:purchase|checkout|place_order|submit_order|buy|subscribe|payment|charge).*"
+      ]
+    },
+    {
+      "id": "remote.private-egress",
+      "category": "private_egress",
+      "priority": 150,
+      "tool_name_any": [
+        "(?i)(?:github|gitlab|gmail|mail|slack|teams|calendar|notion|jira|confluence|drive|dropbox|linear|discord|webhook|upload|send|share|publish|post).*"
+      ],
+      "input_any": [
+        "(?i)(?:api[_ -]?key|\\btoken\\b|access[_ -]?token|refresh[_ -]?token|password|passwd|private[_ -]?key|credential|client[_ -]?secret|authorization|bearer\\s+[A-Za-z0-9._-]+|BEGIN [A-Z ]*PRIVATE KEY|\\.env\\b|confidential|기밀|비공개|개인정보|비밀번호|토큰|자격증명)"
+      ]
+    }
   ]
 }
