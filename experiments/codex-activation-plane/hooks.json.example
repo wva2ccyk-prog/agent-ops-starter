@@ -1,0 +1,7 @@
+{
+  "description": "Optional Codex-only activation plane experiment. Not part of the starter defaults.",
+  "hooks": {
+    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "python3 \"$HOME/.codex/hooks/activation_router.py\"", "commandWindows": "python \"%USERPROFILE%\\.codex\\hooks\\activation_router.py\"", "timeout": 3, "additionalContextLimit": 400}]}],
+    "PreToolUse": [{"hooks": [{"type": "command", "command": "python3 \"$HOME/.codex/hooks/activation_router.py\"", "commandWindows": "python \"%USERPROFILE%\\.codex\\hooks\\activation_router.py\"", "timeout": 3}], "matcher": "(?i)(shell|exec|terminal|powershell|bash|zsh|command|github|gitlab|gmail|mail|slack|teams|calendar|notion|jira|confluence|drive|dropbox|linear|discord|webhook|purchase|checkout|order|payment|charge|deploy|publish|release)"}]
+  }
+}
