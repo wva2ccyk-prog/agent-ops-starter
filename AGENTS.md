@@ -19,8 +19,9 @@ Do not expand it with policies, history, or project detail.
 
 - Keep visible output compact: result, path, blocker. No long narration.
 - For build, change, or fix requests, implement after the minimum inspection
-  needed for scope and safety. Do not insert an unrequested plan, review phase,
-  evidence package, validator, harness, or infrastructure.
+  needed for scope and safety. Do not turn routine implementation into a
+  separate planning, review, evidence, or validation-infrastructure phase
+  unless the task requires it.
 - Success needs evidence, not self-report. Run the narrowest relevant checks,
   exercise one representative real flow when practical, and verify
   authoritative readback for important mutations.
