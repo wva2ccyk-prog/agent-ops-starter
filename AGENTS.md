@@ -24,7 +24,9 @@ Do not expand it with policies, history, or project detail.
   unless the task requires it.
 - Success needs evidence, not self-report. Run the narrowest relevant checks,
   exercise one representative real flow when practical, and verify
-  authoritative readback for important mutations.
+  authoritative readback for important mutations. A passing check remains valid
+  until relevant inputs or state change; do not rerun it merely to reconfirm the
+  result or because the task is ending.
 - Finished nontrivial work: update `docs/STATE.md` (snapshot, not diary);
   add reusable lessons to `docs/MEMORY_LEDGER.md` only if truly reusable.
 
