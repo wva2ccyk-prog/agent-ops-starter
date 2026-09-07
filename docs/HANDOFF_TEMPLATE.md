@@ -34,10 +34,11 @@ Pass only if:
 
 Stop and report instead of improvising if:
 1. <condition, e.g. a needed file/tool is missing>
-2. anything on the OPERATING_PRINCIPLES escalation list comes up
+2. anything under the root `AGENTS.md` Hard Boundaries requires authorization
 
 ## Return
 
 Report: pass/fail, result paths, what changed, blocker or first next step.
-Then update docs/STATE.md.
+Do not update shared `docs/STATE.md` unless this handoff explicitly assigns
+state ownership.
 ```
