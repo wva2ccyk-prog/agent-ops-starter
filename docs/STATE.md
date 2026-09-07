@@ -1,7 +1,12 @@
 # State
 
-Current-work snapshot only. Overwrite sections in place — this is not a diary
-or a log. History belongs in archived handoffs, not here.
+Current-work snapshot for the canonical ongoing thread only. Overwrite sections
+in place — this is not a diary or a log. History belongs in archived handoffs,
+not here.
+
+Bounded or parallel work should report continuity information to the controlling
+thread instead of editing this shared snapshot, unless that work was explicitly
+given state ownership.
 
 ## Now
 
