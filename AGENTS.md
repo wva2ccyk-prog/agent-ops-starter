@@ -6,10 +6,12 @@ Do not expand it with policies, history, or project detail.
 ## First Move
 
 - If the user message or a task file contains `read_set`, explicit paths, or
-  "read only", read exactly those first and treat them as the authority for
-  the turn.
-- For ordinary bounded work, read no docs. Inspect only the files directly
-  implicated by the task, then do the work.
+  "read only", read exactly those first and treat them as the task-local source
+  of truth. They narrow retrieval scope; they do not override current explicit
+  user instructions or expand permissions.
+- For ordinary bounded work, read no operating docs by default. Inspect only
+  the smallest task-relevant set of code, tests, configuration, and project
+  documentation needed to complete the work correctly.
 - To resume prior work: read `docs/STATE.md`.
 - For rule/system/maintenance work: read `docs/OPERATING_PRINCIPLES.md` first.
 - To find any other doc: resolve its NAME in `docs/RETRIEVAL_MAP.md`, then open
@@ -27,11 +29,16 @@ Do not expand it with policies, history, or project detail.
   authoritative readback for important mutations. A passing check remains valid
   until relevant inputs or state change; do not rerun it merely to reconfirm the
   result or because the task is ending.
-- Finished nontrivial work: update `docs/STATE.md` (snapshot, not diary);
-  add reusable lessons to `docs/MEMORY_LEDGER.md` only if truly reusable.
+- Finished nontrivial work that advances the canonical ongoing thread: update
+  `docs/STATE.md` (snapshot, not diary). Bounded or parallel work should report
+  continuity information instead unless it was explicitly assigned state
+  ownership. Add reusable lessons to `docs/MEMORY_LEDGER.md` only if truly
+  reusable.
 
-## Hard Boundaries (ask the user first)
+## Hard Boundaries (ask the user first unless already authorized)
 
-Spending money; deleting or overwriting things you did not create; sending
-private data anywhere; anything public-facing; changing the rules in `docs/`.
-Everything else inside the given task: proceed without asking.
+Spending money; destructively deleting or replacing pre-existing user work in a
+way that may discard unrelated changes; sending private data to an external
+service; taking a public-facing action; changing the operating rules in `docs/`.
+Ordinary edits required by the assigned task are not destructive overwrite.
+Everything else inside the authorized task: proceed without asking.
