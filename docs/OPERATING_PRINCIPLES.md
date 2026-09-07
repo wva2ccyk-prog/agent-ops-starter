@@ -14,9 +14,10 @@ Before writing it, ask in order:
 2. Can this be a **required field in a template** instead? (medium)
 3. Only then write prose (weakest — models follow prose least reliably).
 
-New docs must be registered in `doc:RETRIEVAL_MAP` or they do not exist.
-Keep state (things that change) and rules (things that don't) in separate
-files — mixed files go stale as a whole.
+New active operating docs under `docs/` must be registered in
+`doc:RETRIEVAL_MAP`. Root/nested `AGENTS.md` files and Skills use their native
+loading mechanisms instead. Keep state (things that change) and rules (things
+that don't) in separate files — mixed files go stale as a whole.
 
 Task-specific guidance gets its own registered doc, loaded on its trigger.
 Never fold it into a doc that unrelated work already reads: a tool endpoint or
