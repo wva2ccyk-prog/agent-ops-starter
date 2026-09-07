@@ -51,8 +51,10 @@
 1. **항상 로드되는 파일은 하나, 그것도 라우터.** 규칙집이 아니라 이정표.
    나머지는 전부 문 뒤에 두고 필요할 때만 연다. AI는 파일을 통째로 읽으므로
    비용 절감은 "파일을 작게, 여는 수를 적게"에서만 나온다.
-2. **모든 문서는 이름표(리졸버)에 등록한다.** 등록 안 된 문서는 AI에게
-   존재하지 않는다. 태그·분류 체계는 만들지 마라 — 장식이다.
+2. **`docs/`의 active operating doc은 전부 이름표(리졸버)에 등록한다.**
+   등록 안 된 `docs/` 문서는 resolver 경로에서 AI에게 보이지 않는다.
+   루트/중첩 `AGENTS.md`와 Skill처럼 native loader가 읽는 문서는 별도 진입점이다.
+   태그·분류 체계는 만들지 마라 — 장식이다.
 3. **산문 < 템플릿 < 스크립트.** 산문 규칙은 가장 약한 도구다. 강제하고 싶은
    것은 템플릿의 필수 빈칸으로, 검증하고 싶은 것은 스크립트로 만들어라.
 4. **AI에게는 시계도 눈금도 없다.** 정기 점검은 스케줄러(기계)가 시작하고,
@@ -76,9 +78,9 @@
 ## 이 킷을 쓰는 사람에게
 
 이 킷이 작은 것은 시작이라서가 아니라 그게 결론이기 때문이다. 당신의 작업이
-늘어나면 문서도 늘겠지만, 늘어난 문서가 전부 이름표에 등록되어 있고, 세션당
-여는 파일이 두세 개로 유지되고, 월 1회 검사가 통과하는 한 이 체계는 무너지지
-않는다. 내가 겪은 붕괴는 전부 이 세 가지 중 하나가 깨졌을 때 왔다.
+늘어나면 `docs/`의 운영 문서도 늘겠지만, 그 문서가 전부 이름표에 등록되어 있고,
+세션당 여는 파일이 두세 개로 유지되고, 월 1회 검사가 통과하는 한 이 체계는
+무너지지 않는다. 내가 겪은 붕괴는 전부 이 세 가지 중 하나가 깨졌을 때 왔다.
 
 — 반년간 AI 운영 체계를 만들고 부수고 다시 만든 어느 비개발자
 
@@ -144,9 +146,10 @@ while it is collapsing, you only find out after it has collapsed.
    rulebook. Everything else lives behind doors and is opened on demand. An
    AI reads files whole, so cost reduction comes only from "smaller files,
    fewer opens."
-2. **Every document gets one row in the resolver.** An unregistered document
-   does not exist for the AI. Do not build tag taxonomies — they are
-   decoration.
+2. **Every active operating doc under `docs/` gets one row in the resolver.**
+   An unregistered `docs/` document is not visible on the resolver path.
+   Root/nested `AGENTS.md` files and Skills loaded by native mechanisms are
+   separate entry points. Do not build tag taxonomies — they are decoration.
 3. **Prose < templates < scripts.** Prose rules are the weakest instrument.
    What you want enforced becomes a required blank in a template; what you
    want verified becomes a script.
@@ -175,11 +178,10 @@ while it is collapsing, you only find out after it has collapsed.
 ## To Whoever Uses This Kit
 
 This kit is small not because it is a beginning, but because smallness is the
-conclusion. As your work grows, your documents will grow too — but as long as
-every new document is registered in the resolver, per-session reads stay at
-two or three files, and the monthly check passes, this system will not
-collapse. Every collapse I lived through came from breaking one of those
-three.
+conclusion. As your work grows, the operating docs under `docs/` will grow too
+— but as long as every new one is registered in the resolver, per-session reads
+stay at two or three files, and the monthly check passes, this system will not
+collapse. Every collapse I lived through came from breaking one of those three.
 
 — A non-developer who built, broke, and rebuilt an AI operating system for
 half a year
