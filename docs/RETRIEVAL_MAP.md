@@ -1,8 +1,9 @@
 # Retrieval Map
 
-Single resolver for doc names. Cross-doc pointers use `doc:<NAME>`; resolve the
-NAME here, open only that one file. A doc not listed here does not exist for
-the model — register every new doc with one row.
+Single resolver for active operating docs under `docs/`. Cross-doc pointers use
+`doc:<NAME>`; resolve the NAME here, then open only that file. Register each new
+active Markdown doc under `docs/` with one row. Root or nested `AGENTS.md` files
+and Skills use their own loading mechanisms and are outside this resolver.
 
 Row format: NAME|relative/path.md|one-line role
 
