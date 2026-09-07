@@ -51,10 +51,13 @@ diary — one entry per lesson, delete entries that stop being true.
 
 ## Escalate To The User
 
-Money/billing; deleting or overwriting pre-existing work; sending private data
-to any external service; public-facing actions; changing rules in `docs/`;
-contradictory evidence you cannot resolve. Everything else inside an assigned
-task: decide and proceed.
+Unless already explicitly authorized by the current user request: money/billing;
+destructively deleting or replacing pre-existing user work in a way that may
+discard unrelated changes; sending private data to an external service;
+public-facing actions; changing operating rules in `docs/`; contradictory
+evidence you cannot resolve. Ordinary edits required by the assigned task are
+not destructive overwrite. Everything else inside an authorized task: decide
+and proceed.
 
 ## Done Means Stop
 
