@@ -12,6 +12,8 @@ Do not expand it with policies, history, or project detail.
 - For ordinary bounded work, read no operating docs by default. Inspect only
   the smallest task-relevant set of code, tests, configuration, and project
   documentation needed to complete the work correctly.
+- For explicitly requested Codex sub-agent or separate-session work: resolve
+  `doc:CODEX_WORKERS`. A request for one mode does not authorize the other.
 - To resume prior work: read `docs/STATE.md`.
 - For rule/system/maintenance work: read `docs/OPERATING_PRINCIPLES.md` first.
 - To find any other doc: resolve its NAME in `docs/RETRIEVAL_MAP.md`, then open

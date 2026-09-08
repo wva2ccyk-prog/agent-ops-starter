@@ -3,7 +3,8 @@
 **한국어** | [English](#english)
 
 Codex를 중심으로, 다른 AI CLI에도 옮겨 쓸 수 있게 만든 **portable agent-ops
-baseline**입니다. 한 컴퓨터에서만 성립하는 개인 경로나 특정 모델 조합은 빼고,
+baseline**입니다. 개인용 새 컴퓨터 부트스트랩으로도 사용합니다. 한 컴퓨터에서만
+성립하는 개인 경로와 세션 상태는 빼고,
 몇 달 이상 운영하며 반복해서 다시 필요했던 규칙·상태·메모리·handoff·검사 구조만
 남겼습니다. 비개발자가 반년간 실제 운영하며 겪은 붕괴(비용 폭발, 규칙 비대화,
 메모리 부패)에서 살아남은 구조가 바탕입니다.
@@ -74,10 +75,21 @@ baseline**입니다. 한 컴퓨터에서만 성립하는 개인 경로나 특정
   `AGENTS.md`에 두세요. **task-type rule은 lane, path-type rule은 nested
   `AGENTS.md`**로 나누면 retrieval이 단순해집니다.
 - 새 컴퓨터에서 그대로 성립하지 않는 절대 경로, 계정·비밀, 특정 머신 전용 도구나
-  일회성 모델 라우팅은 이 portable baseline에 넣지 말고 로컬 설정으로 두세요.
+  일회성 모델 라우팅은 로컬 설정으로 두세요. 재사용할 개인용 Codex 기본 모델은
+  선택형 `docs/CODEX_WORKERS.md`에서만 관리합니다.
 - 검사기는 두 판 모두 같은 항목을 검사합니다. 둘 중 편한 것을 쓰세요.
   자가검사는 `python3 tools/check_docs.py --self-test` 또는
   `pwsh -NoProfile -File tools/check_docs.ps1 -SelfTest`로 실행합니다.
+
+## Codex 선택 기능: 워커와 별도 세션
+
+"서브에이전트로 맡겨" 또는 "새 세션으로 맡겨"라고 명시했을 때만
+`docs/CODEX_WORKERS.md`를 읽습니다. Luna Max / Terra XHigh 중 작업에 맞게
+최초 선택하고, 다른 모델은 사용자 지정 시에만 사용합니다. 실패 후 자동 모델
+변경은 하지 않습니다. 별도 세션은 완료 결과를 한 번 반환하며 상시 감시하지
+않습니다. 새 컴퓨터에서는 모델·추론 설정과 작업 생성/메시지 기능의 가용성을
+확인하고, 미지원이면 임의 대체하지 않습니다. 세션 ID·전달 상태는 이 저장소에
+포함하지 않습니다. 이 선택 기능은 다른 AI CLI의 기본 동작을 정의하지 않습니다.
 
 ## Codex 선택 기능: ChatGPT 협업
 
@@ -103,7 +115,8 @@ Codex 앱에서 "GPT와 협업해" 또는 "GPT Pro에게 리뷰시켜"라고 요
 [한국어](#agent-ops-starter) | **English**
 
 A **portable agent-ops baseline** built around Codex and designed to carry over
-to other AI CLIs. It leaves out one-machine paths and model-specific routing,
+to other AI CLIs, also used as a personal new-computer bootstrap. It leaves out
+one-machine paths and session state,
 while keeping the rules, state, memory, handoff, and integrity-check structure
 that proved worth rebuilding across environments. The design comes from six
 months of real operation by a non-developer through cost blowups, rule bloat,
@@ -178,9 +191,20 @@ no rule.** This kit stays small by design, not because it is unfinished.
   rules belong in nested `AGENTS.md`.**
 - Keep absolute paths, accounts/secrets, one-machine-only tools, and temporary
   model routing out of this portable baseline. Those belong in local setup.
+  Reusable personal Codex model defaults live only in optional `docs/CODEX_WORKERS.md`.
 - Both checkers run the same checks — use whichever fits your machine. Run
   `python3 tools/check_docs.py --self-test` or
   `pwsh -NoProfile -File tools/check_docs.ps1 -SelfTest` to prove detection.
+
+## Optional Codex Feature: Workers And Separate Sessions
+
+Read `docs/CODEX_WORKERS.md` only when the user requests a subagent or separate
+session. Initially choose Luna Max or Terra XHigh by task scope; other models
+require user naming. Failure never authorizes an automatic model change. Separate
+sessions return one completion result without continuous supervision. On a new
+computer, verify model/effort and task creation/messaging availability; do not
+silently substitute unavailable capabilities. Keep session IDs and dispatch
+state local. This optional lane does not define other AI CLIs' defaults.
 
 ## Optional Codex Feature: ChatGPT Collaboration
 
