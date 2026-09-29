@@ -9,8 +9,18 @@ param(
 # docs/; missing router/map/file targets; duplicate names/paths; unresolved
 # doc: tokens; and active Markdown files under docs/ absent from the resolver.
 # -AllowOrphans is an explicit migration-only downgrade to WARN for orphan docs.
+# Size caps: router 4KB, state docs 6KB, other active docs 10KB, optional
+# always-loaded -Extra files 3KB. Oversize is an error; above 80% warns.
 
 $ErrorActionPreference = "Stop"
+$Extra = @()
+for ($i = 0; $i -lt $args.Count; $i++) {
+  if ($args[$i] -ne '-Extra' -or $i + 1 -ge $args.Count) {
+    throw "Unexpected argument: $($args[$i]); use -Extra <file> for each extra file"
+  }
+  $i++
+  $Extra += [string]$args[$i]
+}
 
 function Normalize-ResolverPath([string]$Value) {
   if ([string]::IsNullOrWhiteSpace($Value)) { return $null }
@@ -21,7 +31,18 @@ function Normalize-ResolverPath([string]$Value) {
   return ($parts -join '/')
 }
 
-function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
+function Get-SizeFinding([string]$Path, [long]$Cap) {
+  $size = (Get-Item -LiteralPath $Path).Length
+  $detail = "$Path ($size bytes, cap $Cap bytes)"
+  if ($size -gt $Cap) {
+    return [pscustomobject]@{ Severity='ERROR'; Message="oversize: $detail - split or diet" }
+  }
+  if ($size -gt ($Cap * 0.8)) {
+    return [pscustomobject]@{ Severity='WARN'; Message="near cap: $detail" }
+  }
+}
+
+function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans, [string[]]$ExtraFiles = @()) {
   $errors = @()
   $warnings = @()
   $mapPath = Join-Path (Join-Path $CheckRoot "docs") "RETRIEVAL_MAP.md"
@@ -68,6 +89,7 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
 
   $seenName = @{}
   $seenPath = @{}
+  $statePaths = @{}
   foreach ($row in $rows) {
     $safePath = Normalize-ResolverPath $row.Path
     if (-not $safePath) {
@@ -84,6 +106,9 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
     else { $seenName[$row.Name] = $true }
     if ($seenPath.ContainsKey($pathKey)) { $errors += "duplicate path: $pathKey" }
     else { $seenPath[$pathKey] = $true }
+    if (($row.Name -eq 'STATE' -or $row.Name -eq 'MEMORY_LEDGER') -and $safePath) {
+      $statePaths[$safePath] = $true
+    }
   }
 
   $docsRoot = Join-Path $CheckRoot "docs"
@@ -112,15 +137,27 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans) {
     }
   }
 
+  $sizedFiles = @()
   if (Test-Path -LiteralPath $routerPath -PathType Leaf) {
-    $router = Get-Item -LiteralPath $routerPath
-    if ($router.Length -gt 4KB) {
-      $warnings += "AGENTS.md over 4KB ($([math]::Round($router.Length/1KB,1))KB) - it should route, not legislate"
-    }
+    $sizedFiles += [pscustomobject]@{ Path=$routerPath; Cap=4KB }
   }
   foreach ($file in $docFiles) {
-    if ($file.Length -gt 15KB) {
-      $warnings += "doc over 15KB: $($file.Name) ($([math]::Round($file.Length/1KB,1))KB) - split or diet"
+    $rel = $file.FullName.Substring($CheckRoot.Length).TrimStart('\', '/') -replace '\\', '/'
+    $cap = if ($statePaths.ContainsKey($rel)) { 6KB } else { 10KB }
+    $sizedFiles += [pscustomobject]@{ Path=$file.FullName; Cap=$cap }
+  }
+  foreach ($path in $ExtraFiles) {
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+      $sizedFiles += [pscustomobject]@{ Path=$path; Cap=3KB }
+    } else {
+      $errors += "extra file missing: $path"
+    }
+  }
+  foreach ($entry in $sizedFiles) {
+    $finding = Get-SizeFinding $entry.Path $entry.Cap
+    if ($finding) {
+      if ($finding.Severity -eq 'ERROR') { $errors += $finding.Message }
+      else { $warnings += $finding.Message }
     }
   }
 
@@ -143,6 +180,11 @@ function Invoke-SelfTest {
     Set-Content -LiteralPath (Join-Path $tmp "AGENTS.md") -Value "router. see doc:GHOST" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $tmp "docs/REAL.md") -Value "real doc" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $tmp "docs/ORPHAN.md") -Value "not registered" -Encoding UTF8
+    [IO.File]::WriteAllText((Join-Path $tmp "docs/BIG.md"), ('x' * (10KB + 1)))
+    [IO.File]::WriteAllText((Join-Path $tmp "docs/NEAR.md"), ('x' * [int](10KB * 0.9)))
+    [IO.File]::WriteAllText((Join-Path $tmp "docs/STATE.md"), ('x' * (6KB + 1)))
+    $extraFile = Join-Path $sandbox "EXTRA.md"
+    [IO.File]::WriteAllText($extraFile, ('x' * (3KB + 1)))
     @"
 # Retrieval Map
 
@@ -157,12 +199,15 @@ ABSOLUTE|$outside|existing absolute file outside repository
 DRIVE|C:\absolute\outside.md|drive-root path
 BROKEN_TOO_FEW|docs/REAL.md
 BROKEN_TOO_MANY|docs/REAL.md|role|extra
+BIG|docs/BIG.md|oversize doc
+NEAR|docs/NEAR.md|near-cap doc
+STATE|docs/STATE.md|oversize state doc
 RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
 
 ## Rules For This File
 "@ | Set-Content -LiteralPath (Join-Path $tmp "docs/RETRIEVAL_MAP.md") -Encoding UTF8
 
-    $strict = Invoke-DocsCheck $tmp $false
+    $strict = Invoke-DocsCheck $tmp $false @($extraFile, (Join-Path $sandbox "NOPE.md"))
     $migration = Invoke-DocsCheck $tmp $true
     $joined = (@($strict.Errors) + @($strict.Warnings)) -join " | "
     $migrationJoined = (@($migration.Errors) + @($migration.Warnings)) -join " | "
@@ -180,6 +225,11 @@ RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
       "reject parent escape" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("ESCAPE -> ../outside.md"))
       "reject absolute path" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("ABSOLUTE ->"))
       "reject drive-root path" = ($joined.Contains("unsafe resolver path") -and $joined.Contains("DRIVE -> C:"))
+      "oversize doc error" = (@($strict.Errors | Where-Object { $_ -like '*oversize*BIG.md*' }).Count -gt 0)
+      "near-cap doc warning" = (@($strict.Warnings | Where-Object { $_ -like '*near cap*NEAR.md*' }).Count -gt 0)
+      "state doc cap" = (@($strict.Errors | Where-Object { $_ -like '*oversize*STATE.md*cap 6144 bytes*' }).Count -gt 0)
+      "oversize extra error" = (@($strict.Errors | Where-Object { $_ -like '*oversize*EXTRA.md*' }).Count -gt 0)
+      "missing extra error" = (@($strict.Errors | Where-Object { $_ -like '*extra file missing*NOPE.md*' }).Count -gt 0)
     }
     foreach ($entry in $expectations.GetEnumerator()) {
       Write-Host ("  [{0}] {1}" -f $(if ($entry.Value) { "OK" } else { "MISS" }), $entry.Key)
@@ -200,7 +250,7 @@ if ($SelfTest) {
 }
 if (-not $Root) { $Root = Split-Path $PSScriptRoot -Parent }
 $Root = [IO.Path]::GetFullPath($Root)
-$result = Invoke-DocsCheck $Root ([bool]$AllowOrphans)
+$result = Invoke-DocsCheck $Root ([bool]$AllowOrphans) $Extra
 foreach ($item in $result.Errors) { Write-Output "ERROR: $item" }
 foreach ($item in $result.Warnings) { Write-Output "WARN: $item" }
 Write-Output ("rows={0} docs={1} errors={2} warnings={3}" -f $result.RowCount, $result.DocCount, $result.Errors.Count, $result.Warnings.Count)

@@ -32,8 +32,9 @@ baseline**입니다. 개인용 새 컴퓨터 부트스트랩으로도 사용합�
 | `docs/MEMORY_LEDGER.md` | 재사용할 교훈만 축적 | AI (관련될 때) |
 | `docs/HANDOFF_TEMPLATE.md` | AI에게 bounded task를 줄 때 쓰는 작업 지시 양식 | 사람이 복사해서 사용 |
 | `.agents/skills/chatgpt-collaboration/SKILL.md` | 인앱 브라우저에서 ChatGPT와 협업하는 선택형 Codex 스킬 | Codex (관련 요청 때) |
-| `tools/check_docs.py` | 문서 무결성 검사 (Python, 모든 OS). 월 1회 실행 | 사람 |
+| `tools/check_docs.py` | 문서 무결성·크기 상한 검사 (Python, 모든 OS) | 사람/훅 |
 | `tools/check_docs.ps1` | 같은 검사의 PowerShell 판. 파이썬이 없을 때 | 사람 |
+| `tools/docs_hook.py` | 규칙 편집 뒤 검사 결과를 AI에게 돌려주는 선택형 훅 | Codex/Claude Code |
 | `ESSAY.md` | 이 구조가 나온 이유 — 반년 운영의 실패 기록과 원리 | 사람 |
 
 ## 운영 루틴 (사람이 할 일)
@@ -43,9 +44,11 @@ baseline**입니다. 개인용 새 컴퓨터 부트스트랩으로도 사용합�
   `STATE.md`를 갱신합니다. bounded/parallel work는 shared state를 직접 덮지 말고
   다음 단계나 변경된 전제를 controlling thread에 보고합니다. 재사용할 교훈이
   있을 때만 `MEMORY_LEDGER.md`에 한 줄 추가합니다.
+- **규칙 파일을 편집할 때**: 아래 자동 검사 훅을 연결했다면 편집 직후 출력된
+  FAIL 또는 near-cap WARN을 해결합니다.
 - **월 1회 (5분)**: `python3 tools/check_docs.py` 실행 → `RESULT: PASS` 확인.
   (파이썬이 없으면 `pwsh -NoProfile -File tools/check_docs.ps1`)
-  FAIL이면 출력을 AI에게 붙여넣고 "고쳐줘".
+  FAIL이면 출력을 AI에게 붙여넣고 "고쳐줘". WARN도 문서를 나누거나 줄입니다.
 - **분기 1회**: AI에게 "OPERATING_PRINCIPLES의 Diet Protocol에 따라 삭제 후보를
   순위 목록으로만 제안해. 적용하지 마." → 훑어보고 승인한 것만 지우게 함.
 
@@ -57,6 +60,26 @@ baseline**입니다. 개인용 새 컴퓨터 부트스트랩으로도 사용합�
 `docs/`는 AI가 실제 검색 대상으로 취급하는 **active retrievable corpus**입니다.
 초안, 원시 로그, 보관본처럼 active retrieval에 참여하면 안 되는 자료는 검사기
 통과를 위해 억지로 등록하지 말고 `docs/` 밖에 두세요.
+
+크기 상한은 바이트 기준(1KB = 1024바이트)입니다: 루트 `AGENTS.md` 4KB,
+resolver의 `STATE`와 `MEMORY_LEDGER` 6KB, 다른 `docs/*.md` 10KB.
+상한 초과는 ERROR/`RESULT: FAIL`, 상한의 80% 초과는 near-cap WARN입니다.
+`docs/` 밖의 다른 상시 로드 파일은 `--extra <file>`(PowerShell: `-Extra <file>`)
+를 반복해서 지정하면 파일당 3KB를 검사합니다. 이 파일들을 지정하지 않으면
+검사 대상이 아닙니다.
+
+## 자동 검사 훅 (선택)
+
+`tools/docs_hook.py`를 프로젝트의 PostToolUse 명령 훅으로 연결하세요. Codex는
+프로젝트 `.codex/hooks.json`의 `PostToolUse`에 `Bash|apply_patch|Edit|Write`
+matcher와 `python3 tools/docs_hook.py` 명령을 등록하고, 훅을 검토·신뢰해야
+실행합니다. Claude Code는 프로젝트 `.claude/settings.json`의 `hooks.PostToolUse`
+에 `Bash|Edit|Write` matcher와 같은 명령을 등록하세요. 명령은 이 저장소
+루트에서 실행되도록 맞추고, 다른 상시 로드 파일이 있다면 명령 뒤에
+`--extra <file>`을 파일마다 추가하세요. 훅은 FAIL 또는 WARN 때 보고서를
+stderr로 출력하고 종료 코드 2를 반환합니다. 수동 월간 검사도 유지하세요.
+설정 형식: [Codex hooks](https://learn.chatgpt.com/docs/hooks),
+[Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
 ## 규칙을 추가하고 싶을 때 (가장 중요)
 
@@ -146,8 +169,9 @@ It takes ten minutes.
 | `docs/MEMORY_LEDGER.md` | Reusable lessons only | AI (when relevant) |
 | `docs/HANDOFF_TEMPLATE.md` | Task-instruction form for bounded work | Humans (copy per task) |
 | `.agents/skills/chatgpt-collaboration/SKILL.md` | Optional Codex workflow for collaborating with ChatGPT in the in-app browser | Codex (matching requests) |
-| `tools/check_docs.py` | Docs integrity check (Python, any OS). Run monthly | Humans |
+| `tools/check_docs.py` | Docs integrity and size-cap check (Python, any OS) | Humans/hooks |
 | `tools/check_docs.ps1` | Same checks in PowerShell, for machines without Python | Humans |
+| `tools/docs_hook.py` | Optional post-edit feedback hook for rule docs | Codex/Claude Code |
 | `ESSAY.md` | Where this structure came from — six months of failures and principles | Humans |
 
 ## Operating Routine (the human's job)
@@ -158,9 +182,11 @@ It takes ten minutes.
   assumptions and the next step to the controlling thread instead of mutating
   shared state. Add one line to `MEMORY_LEDGER.md` only for a genuinely reusable
   lesson.
+- **After editing rules**: if you installed the hook below, resolve any FAIL or
+  near-cap WARN it reports.
 - **Monthly (5 min)**: run `python3 tools/check_docs.py` → confirm `RESULT: PASS`
   (no Python? `pwsh -NoProfile -File tools/check_docs.ps1`).
-  If FAIL, paste the output to the AI and say "fix it."
+  If FAIL, paste the output to the AI and say "fix it." Split or trim on WARN too.
 - **Quarterly**: tell the AI "following the Diet Protocol in
   OPERATING_PRINCIPLES, propose deletion candidates as a ranked list only. Do
   not apply." → skim, approve, and let it delete only the approved items.
@@ -173,6 +199,25 @@ other integrity error still fails.
 `docs/` is the **active retrievable corpus**. Drafts, raw logs, archives, and
 other material that should not participate in active retrieval belong outside
 `docs/`; do not register them merely to satisfy the checker.
+
+Caps are in bytes (1KB = 1024 bytes): root `AGENTS.md` 4KB, resolver entries
+`STATE` and `MEMORY_LEDGER` 6KB, and other `docs/*.md` files 10KB. Exceeding a
+cap is an ERROR and `RESULT: FAIL`; exceeding 80% is a near-cap WARN. For other
+always-loaded files outside `docs/`, repeat `--extra <file>` (PowerShell:
+`-Extra <file>`) to check each against 3KB. Files outside `docs/` are not
+checked unless supplied this way.
+
+## Auto-check hook (optional)
+
+Register `tools/docs_hook.py` as a project PostToolUse command hook. In Codex,
+use `.codex/hooks.json`, match `Bash|apply_patch|Edit|Write`, and run
+`python3 tools/docs_hook.py`; review and trust the hook so Codex runs it. In
+Claude Code, use `.claude/settings.json` under `hooks.PostToolUse`, match
+`Bash|Edit|Write`, and run the same command. Arrange for the command to run
+from this repository root. Append `--extra <file>` for each other always-loaded
+file. The hook prints the report to stderr and exits 2 on FAIL or WARN. Keep
+the monthly manual check. Configuration references: [Codex hooks](https://learn.chatgpt.com/docs/hooks),
+[Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
 ## Before Adding Any Rule (the most important part)
 

@@ -25,6 +25,8 @@ domain rule buried in a general doc is paid for on every turn that opens it.
 
 ## Diet Protocol (removing rules/docs without the keep-all/delete-all failure)
 
+On size-cap FAIL or near-cap WARN, split or diet the doc; raising a cap is a user decision.
+
 Models are poorly calibrated at absolute "is this important?" judgments.
 Never ask for binary keep/delete over a corpus. Instead:
 

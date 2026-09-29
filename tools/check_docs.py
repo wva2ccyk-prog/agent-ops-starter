@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Monthly integrity check for the starter kit docs. Read-only.
+"""Integrity and size-cap check for the starter kit docs. Read-only.
 
 Cross-platform twin of ``check_docs.ps1``. By default it fails on malformed
 resolver-table rows, resolver rows that escape the active ``docs/`` corpus or
@@ -7,6 +7,9 @@ do not resolve to files, duplicate names/paths, unresolved ``doc:`` tokens, a
 missing router, and active Markdown files under ``docs/`` that are absent from
 the resolver. ``--allow-orphans`` is an explicit migration escape hatch that
 downgrades only the orphan condition to WARN.
+
+Size caps: router 4KB, state docs 6KB, other active docs 10KB, and optional
+always-loaded ``--extra`` files 3KB. Oversize is an error; above 80% warns.
 
 Run:       python3 tools/check_docs.py
 Migration: python3 tools/check_docs.py --allow-orphans
@@ -23,7 +26,11 @@ ROW_RE = re.compile(r"^([A-Z0-9_]+)\|([^|]+)\|([^|]+)$")
 DOC_TOKEN_RE = re.compile(r"doc:([A-Z0-9_]+)")
 DRIVE_RE = re.compile(r"^[A-Za-z]:")
 ROUTER_MAX_BYTES = 4 * 1024
-DOC_MAX_BYTES = 15 * 1024
+STATE_DOC_MAX_BYTES = 6 * 1024
+DOC_MAX_BYTES = 10 * 1024
+EXTRA_MAX_BYTES = 3 * 1024
+WARN_RATIO = 0.8
+STATE_DOC_NAMES = {"STATE", "MEMORY_LEDGER"}
 RESOLVER_TABLE_HEADING = "## Resolver Table"
 
 
@@ -76,7 +83,17 @@ def normalize_resolver_path(rel: str) -> str | None:
     return canonical
 
 
-def check(root: Path, *, allow_orphans: bool = False) -> tuple[list[str], list[str], int, int]:
+def check_size(path: Path, cap: int, errors: list[str], warnings: list[str]) -> None:
+    size = path.stat().st_size
+    detail = f"{path} ({size} bytes, cap {cap} bytes)"
+    if size > cap:
+        errors.append(f"oversize: {detail} - split or diet")
+    elif size > cap * WARN_RATIO:
+        warnings.append(f"near cap: {detail}")
+
+
+def check(root: Path, *, allow_orphans: bool = False,
+          extras: tuple[Path, ...] = ()) -> tuple[list[str], list[str], int, int]:
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -95,6 +112,7 @@ def check(root: Path, *, allow_orphans: bool = False) -> tuple[list[str], list[s
 
     seen_name: set[str] = set()
     seen_path: set[str] = set()
+    state_paths: set[str] = set()
     for name, rel, _role in rows:
         safe_rel = normalize_resolver_path(rel)
         if safe_rel is None:
@@ -110,6 +128,8 @@ def check(root: Path, *, allow_orphans: bool = False) -> tuple[list[str], list[s
         if path_key in seen_path:
             errors.append(f"duplicate path: {path_key}")
         seen_path.add(path_key)
+        if name in STATE_DOC_NAMES and safe_rel is not None:
+            state_paths.add(safe_rel)
 
     docs_root = root / "docs"
     doc_files = sorted(p for p in docs_root.rglob("*.md") if p.is_file()) if docs_root.is_dir() else []
@@ -126,23 +146,24 @@ def check(root: Path, *, allow_orphans: bool = False) -> tuple[list[str], list[s
             if token not in seen_name:
                 errors.append(f"unresolved doc token doc:{token} in {path.name}")
 
-    if router.is_file() and router.stat().st_size > ROUTER_MAX_BYTES:
-        warnings.append(
-            "AGENTS.md over 4KB (%.1fKB) - it should route, not legislate"
-            % (router.stat().st_size / 1024)
-        )
+    if router.is_file():
+        check_size(router, ROUTER_MAX_BYTES, errors, warnings)
     for path in doc_files:
-        if path.stat().st_size > DOC_MAX_BYTES:
-            warnings.append(
-                "doc over 15KB: %s (%.1fKB) - split or diet"
-                % (path.name, path.stat().st_size / 1024)
-            )
+        rel = path.relative_to(root).as_posix()
+        cap = STATE_DOC_MAX_BYTES if rel in state_paths else DOC_MAX_BYTES
+        check_size(path, cap, errors, warnings)
+    for path in extras:
+        if path.is_file():
+            check_size(path, EXTRA_MAX_BYTES, errors, warnings)
+        else:
+            errors.append(f"extra file missing: {path}")
 
     return errors, warnings, len(rows), len(doc_files)
 
 
-def run(root: Path, *, allow_orphans: bool = False) -> int:
-    errors, warnings, row_count, doc_count = check(root, allow_orphans=allow_orphans)
+def run(root: Path, *, allow_orphans: bool = False,
+        extras: tuple[Path, ...] = ()) -> int:
+    errors, warnings, row_count, doc_count = check(root, allow_orphans=allow_orphans, extras=extras)
     for item in errors:
         print(f"ERROR: {item}")
     for item in warnings:
@@ -162,6 +183,9 @@ def make_broken_fixture(root: Path, outside: Path) -> None:
     (root / "AGENTS.md").write_text("router. see doc:GHOST\n", encoding="utf-8")
     (root / "docs" / "REAL.md").write_text("real doc\n", encoding="utf-8")
     (root / "docs" / "ORPHAN.md").write_text("not registered\n", encoding="utf-8")
+    (root / "docs" / "BIG.md").write_bytes(b"x" * (DOC_MAX_BYTES + 1))
+    (root / "docs" / "NEAR.md").write_bytes(b"x" * int(DOC_MAX_BYTES * 0.9))
+    (root / "docs" / "STATE.md").write_bytes(b"x" * (STATE_DOC_MAX_BYTES + 1))
     outside.write_text("outside active corpus\n", encoding="utf-8")
     (root / "docs" / "RETRIEVAL_MAP.md").write_text(
         "# Retrieval Map\n\n"
@@ -176,6 +200,9 @@ def make_broken_fixture(root: Path, outside: Path) -> None:
         "DRIVE|C:\\absolute\\outside.md|drive-root path\n"
         "BROKEN_TOO_FEW|docs/REAL.md\n"
         "BROKEN_TOO_MANY|docs/REAL.md|role|extra\n"
+        "BIG|docs/BIG.md|oversize doc\n"
+        "NEAR|docs/NEAR.md|near-cap doc\n"
+        "STATE|docs/STATE.md|oversize state doc\n"
         "RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver\n\n"
         "## Rules For This File\n",
         encoding="utf-8",
@@ -189,7 +216,9 @@ def self_test() -> int:
         root.mkdir()
         outside = sandbox / "outside.md"
         make_broken_fixture(root, outside)
-        errors, warnings, _, _ = check(root)
+        extra = sandbox / "EXTRA.md"
+        extra.write_bytes(b"x" * (EXTRA_MAX_BYTES + 1))
+        errors, warnings, _, _ = check(root, extras=(extra, sandbox / "NOPE.md"))
         joined = " | ".join(errors + warnings)
         migration_errors, migration_warnings, _, _ = check(root, allow_orphans=True)
         migration_joined = " | ".join(migration_errors + migration_warnings)
@@ -209,6 +238,11 @@ def self_test() -> int:
             "reject parent escape": "unsafe resolver path" in joined and "ESCAPE -> ../outside.md" in joined,
             "reject absolute path": "unsafe resolver path" in joined and "ABSOLUTE ->" in joined,
             "reject drive-root path": "unsafe resolver path" in joined and "DRIVE -> C:" in joined,
+            "oversize doc error": any("oversize" in e and "BIG.md" in e for e in errors),
+            "near-cap doc warning": any("near cap" in w and "NEAR.md" in w for w in warnings),
+            "state doc cap": any("oversize" in e and "STATE.md" in e and "cap 6144 bytes" in e for e in errors),
+            "oversize extra error": any("oversize" in e and "EXTRA.md" in e for e in errors),
+            "missing extra error": any("extra file missing" in e and "NOPE.md" in e for e in errors),
         }
         for label, fired in expectations.items():
             print(f"  [{'OK' if fired else 'MISS'}] {label}")
@@ -223,10 +257,13 @@ def main() -> int:
     parser.add_argument("--root", default=str(Path(__file__).resolve().parent.parent))
     parser.add_argument("--allow-orphans", action="store_true")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--extra", action="append", default=[], metavar="FILE",
+                        help="always-loaded file outside docs/ (3KB cap; repeatable)")
     args = parser.parse_args()
     if args.self_test:
         return self_test()
-    return run(Path(args.root).resolve(), allow_orphans=args.allow_orphans)
+    extras = tuple(Path(p).expanduser().resolve() for p in args.extra)
+    return run(Path(args.root).resolve(), allow_orphans=args.allow_orphans, extras=extras)
 
 
 if __name__ == "__main__":
