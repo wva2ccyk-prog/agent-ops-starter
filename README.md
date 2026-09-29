@@ -32,6 +32,7 @@ baseline**입니다. 개인용 새 컴퓨터 부트스트랩으로도 사용합�
 | `docs/MEMORY_LEDGER.md` | 재사용할 교훈만 축적 | AI (관련될 때) |
 | `docs/HANDOFF_TEMPLATE.md` | AI에게 bounded task를 줄 때 쓰는 작업 지시 양식 | 사람이 복사해서 사용 |
 | `.agents/skills/chatgpt-collaboration/SKILL.md` | 인앱 브라우저에서 ChatGPT와 협업하는 선택형 Codex 스킬 | Codex (관련 요청 때) |
+| `adapters/claude/` | Claude Code 연결 파일 (CLAUDE.md 양식, 워커 예시, 훅 설정) | 사람이 설치할 때 |
 | `tools/check_docs.py` | 문서 무결성·크기 상한 검사 (Python, 모든 OS) | 사람/훅 |
 | `tools/check_docs.ps1` | 같은 검사의 PowerShell 판. 파이썬이 없을 때 | 사람 |
 | `tools/docs_hook.py` | 규칙 편집 뒤 검사 결과를 AI에게 돌려주는 선택형 훅 | Codex/Claude Code |
@@ -104,6 +105,13 @@ stderr로 출력하고 종료 코드 2를 반환합니다. 수동 월간 검사�
   자가검사는 `python3 tools/check_docs.py --self-test` 또는
   `pwsh -NoProfile -File tools/check_docs.ps1 -SelfTest`로 실행합니다.
 
+## Claude Code 연결
+
+Claude Code는 루트 `AGENTS.md`가 아니라 `CLAUDE.md`를 읽습니다. 운영 문서를
+복제하지 말고 `adapters/claude/`의 얇은 `CLAUDE.md` 양식으로 라우터를
+불러오세요. 워커 서브에이전트 예시와 훅 설정도 같은 폴더에 있습니다. 설치
+순서와 전역 설치 시 주의점은 `adapters/claude/README.md`를 보세요.
+
 ## Codex 선택 기능: 워커와 별도 세션
 
 "서브에이전트로 맡겨" 또는 "새 세션으로 맡겨"라고 명시했을 때만
@@ -169,6 +177,7 @@ It takes ten minutes.
 | `docs/MEMORY_LEDGER.md` | Reusable lessons only | AI (when relevant) |
 | `docs/HANDOFF_TEMPLATE.md` | Task-instruction form for bounded work | Humans (copy per task) |
 | `.agents/skills/chatgpt-collaboration/SKILL.md` | Optional Codex workflow for collaborating with ChatGPT in the in-app browser | Codex (matching requests) |
+| `adapters/claude/` | Claude Code wiring (CLAUDE.md template, worker example, hook settings) | Humans (at setup) |
 | `tools/check_docs.py` | Docs integrity and size-cap check (Python, any OS) | Humans/hooks |
 | `tools/check_docs.ps1` | Same checks in PowerShell, for machines without Python | Humans |
 | `tools/docs_hook.py` | Optional post-edit feedback hook for rule docs | Codex/Claude Code |
@@ -240,6 +249,13 @@ no rule.** This kit stays small by design, not because it is unfinished.
 - Both checkers run the same checks — use whichever fits your machine. Run
   `python3 tools/check_docs.py --self-test` or
   `pwsh -NoProfile -File tools/check_docs.ps1 -SelfTest` to prove detection.
+
+## Claude Code Wiring
+
+Claude Code reads `CLAUDE.md`, not the root `AGENTS.md`. Do not copy the
+operating docs; use the thin `CLAUDE.md` template in `adapters/claude/` to import
+the router. The same folder has a worker sub-agent example and hook settings.
+See `adapters/claude/README.md` for setup order and global-install notes.
 
 ## Optional Codex Feature: Workers And Separate Sessions
 

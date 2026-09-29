@@ -1,0 +1,28 @@
+# Claude Adapter
+
+Thin adapter. The operating router is imported below; do not grow this file
+into a rulebook.
+
+@<KIT_DIR>/AGENTS.md
+
+## Paths
+
+- `docs/` and `tools/` paths in the router resolve against `<KIT_DIR>`.
+- Generated output, evidence, and scratch: `<RUNTIME_DIR>` unless the user
+  names another location.
+- Project code and project state: the project's own repo/root.
+
+## Sub-agents
+
+- Default worker: `worker`, given a `doc:HANDOFF_TEMPLATE` packet. One request
+  authorizes one worker unless the user asks for several. On failure, repair
+  the packet or report; do not switch models on your own.
+
+## Working style
+
+From Anthropic's Opus prompting guide; keep only the lines you need.
+
+- When the work the user asked for is done and checked, stop and report. Don't
+  add features, tests, files, docs or refactors that weren't asked for.
+- Keep working until everything the user asked for is done, and only stop to ask
+  when you can't go on without the user or before a risky step.
