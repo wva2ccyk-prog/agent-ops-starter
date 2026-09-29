@@ -13,6 +13,7 @@ OPERATING_PRINCIPLES|docs/OPERATING_PRINCIPLES.md|core rules: intake gate, diet 
 STATE|docs/STATE.md|current-work snapshot; resume context
 MEMORY_LEDGER|docs/MEMORY_LEDGER.md|reusable lessons only
 HANDOFF_TEMPLATE|docs/HANDOFF_TEMPLATE.md|task instruction template for bounded work
+SESSION_HANDOFF|docs/SESSION_HANDOFF.md|leave/resume a session handoff; dated files filed per project
 CODEX_WORKERS|docs/CODEX_WORKERS.md|explicit Codex worker selection and separate-session dispatch
 RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
 

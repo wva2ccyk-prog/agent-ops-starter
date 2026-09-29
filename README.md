@@ -31,6 +31,7 @@ baseline**입니다. 개인용 새 컴퓨터 부트스트랩으로도 사용합�
 | `docs/STATE.md` | canonical ongoing work의 현재 스냅샷 (일기 금지) | AI (재개/인계 때) |
 | `docs/MEMORY_LEDGER.md` | 재사용할 교훈만 축적 | AI (관련될 때) |
 | `docs/HANDOFF_TEMPLATE.md` | AI에게 bounded task를 줄 때 쓰는 작업 지시 양식 | 사람이 복사해서 사용 |
+| `docs/SESSION_HANDOFF.md` | 세션·계정을 옮길 때 핸드오프를 남기고 이어받는 규칙 (프로젝트별 `handoffs/` 폴더) | AI (요청할 때) |
 | `.agents/skills/chatgpt-collaboration/SKILL.md` | 인앱 브라우저에서 ChatGPT와 협업하는 선택형 Codex 스킬 | Codex (관련 요청 때) |
 | `adapters/claude/` | Claude Code 연결 파일 (CLAUDE.md 양식, 워커 예시, 훅 설정) | 사람이 설치할 때 |
 | `tools/check_docs.py` | 문서 무결성·크기 상한 검사 (Python, 모든 OS) | 사람/훅 |
@@ -81,6 +82,9 @@ matcher와 `python3 tools/docs_hook.py` 명령을 등록하고, 훅을 검토·�
 stderr로 출력하고 종료 코드 2를 반환합니다. 수동 월간 검사도 유지하세요.
 설정 형식: [Codex hooks](https://learn.chatgpt.com/docs/hooks),
 [Claude Code hooks](https://code.claude.com/docs/en/hooks).
+같은 층의 `config.toml`에 이미 훅이 있으면 `hooks.json`을 따로 만들지 말고
+`config.toml`에 `[[hooks.PostToolUse]]`로 추가하세요. 두 곳에 있으면 Codex가
+경고합니다.
 
 ## 규칙을 추가하고 싶을 때 (가장 중요)
 
@@ -176,6 +180,7 @@ It takes ten minutes.
 | `docs/STATE.md` | Current snapshot of the canonical ongoing work (never a diary) | AI (resume/handoff) |
 | `docs/MEMORY_LEDGER.md` | Reusable lessons only | AI (when relevant) |
 | `docs/HANDOFF_TEMPLATE.md` | Task-instruction form for bounded work | Humans (copy per task) |
+| `docs/SESSION_HANDOFF.md` | Leave and resume a handoff across sessions or accounts (per-project `handoffs/` folders) | AI (on request) |
 | `.agents/skills/chatgpt-collaboration/SKILL.md` | Optional Codex workflow for collaborating with ChatGPT in the in-app browser | Codex (matching requests) |
 | `adapters/claude/` | Claude Code wiring (CLAUDE.md template, worker example, hook settings) | Humans (at setup) |
 | `tools/check_docs.py` | Docs integrity and size-cap check (Python, any OS) | Humans/hooks |
@@ -227,6 +232,9 @@ from this repository root. Append `--extra <file>` for each other always-loaded
 file. The hook prints the report to stderr and exits 2 on FAIL or WARN. Keep
 the monthly manual check. Configuration references: [Codex hooks](https://learn.chatgpt.com/docs/hooks),
 [Claude Code hooks](https://code.claude.com/docs/en/hooks).
+If `config.toml` at the same layer already defines hooks, add this one there as
+`[[hooks.PostToolUse]]` instead of creating `hooks.json`; Codex warns when a
+layer uses both.
 
 ## Before Adding Any Rule (the most important part)
 
