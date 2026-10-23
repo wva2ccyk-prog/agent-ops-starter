@@ -50,7 +50,10 @@ baseline**입니다. 개인용 새 컴퓨터 부트스트랩으로도 사용합�
   FAIL 또는 near-cap WARN을 해결합니다.
 - **월 1회 (5분)**: `python3 tools/check_docs.py` 실행 → `RESULT: PASS` 확인.
   (파이썬이 없으면 `pwsh -NoProfile -File tools/check_docs.ps1`)
-  FAIL이면 출력을 AI에게 붙여넣고 "고쳐줘". WARN도 문서를 나누거나 줄입니다.
+  FAIL이면 출력을 AI에게 붙여넣고 "고쳐줘". 크기 FAIL이나 near-cap WARN은
+  먼저 작업별 내용을 새 문서로 분리하고 resolver에 등록한 뒤 원문에 포인터를
+  남깁니다. 다음으로 대체된 내용을 보관하고, 문구 축약은 마지막에 합니다.
+  상한을 올릴지는 사용자가 결정합니다.
 - **분기 1회**: AI에게 "OPERATING_PRINCIPLES의 Diet Protocol에 따라 삭제 후보를
   순위 목록으로만 제안해. 적용하지 마." → 훑어보고 승인한 것만 지우게 함.
 
@@ -200,7 +203,10 @@ It takes ten minutes.
   near-cap WARN it reports.
 - **Monthly (5 min)**: run `python3 tools/check_docs.py` → confirm `RESULT: PASS`
   (no Python? `pwsh -NoProfile -File tools/check_docs.ps1`).
-  If FAIL, paste the output to the AI and say "fix it." Split or trim on WARN too.
+  If FAIL, paste the output to the AI and say "fix it." On size-cap FAIL or
+  near-cap WARN, first split task-specific parts into a new resolver-registered
+  doc and leave a pointer; then archive superseded content; trim wording last.
+  Raising a cap is a user decision.
 - **Quarterly**: tell the AI "following the Diet Protocol in
   OPERATING_PRINCIPLES, propose deletion candidates as a ranked list only. Do
   not apply." → skim, approve, and let it delete only the approved items.

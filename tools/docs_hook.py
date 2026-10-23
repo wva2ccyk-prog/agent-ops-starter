@@ -60,7 +60,9 @@ def main() -> int:
         command.extend(("--extra", str(path)))
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0 or "WARN:" in result.stdout:
-        sys.stderr.write("Docs check after this edit:\n")
+        sys.stderr.write("Docs check after this edit (on cap FAIL or near-cap WARN: first split "
+                         "task-specific parts into a new resolver-registered doc and leave a pointer; "
+                         "then archive superseded content; trim wording last; raising a cap is a user decision):\n")
         sys.stderr.write(result.stdout)
         sys.stderr.write(result.stderr)
         return 2
