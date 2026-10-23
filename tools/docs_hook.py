@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Post-tool-use size check for edits to this kit's operating rules.
+"""Post-tool-use integrity, size, and history check for operating-rule edits.
 
 The hook accepts Codex or Claude Code JSON on stdin. Unknown or malformed
 payloads trigger a check, so an unrecognized tool cannot silently bypass it.
