@@ -30,6 +30,8 @@ STATE_DOC_MAX_BYTES = 6 * 1024
 DOC_MAX_BYTES = 10 * 1024
 EXTRA_MAX_BYTES = 3 * 1024
 WARN_RATIO = 0.8
+CAP_REPAIR = ("first split task-specific parts into a new resolver-registered doc and leave a pointer; "
+              "then archive superseded content; trim wording last. Raising a cap is a user decision")
 STATE_DOC_NAMES = {"STATE", "MEMORY_LEDGER"}
 RESOLVER_TABLE_HEADING = "## Resolver Table"
 
@@ -87,9 +89,9 @@ def check_size(path: Path, cap: int, errors: list[str], warnings: list[str]) -> 
     size = path.stat().st_size
     detail = f"{path} ({size} bytes, cap {cap} bytes)"
     if size > cap:
-        errors.append(f"oversize: {detail} - split or diet")
+        errors.append(f"oversize: {detail} - {CAP_REPAIR}")
     elif size > cap * WARN_RATIO:
-        warnings.append(f"near cap: {detail}")
+        warnings.append(f"near cap: {detail} - {CAP_REPAIR}")
 
 
 def check(root: Path, *, allow_orphans: bool = False,
