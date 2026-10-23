@@ -14,6 +14,8 @@ Do not expand it with policies, history, or project detail.
   documentation needed to complete the work correctly.
 - For explicitly requested Codex sub-agent or separate-session work: resolve
   `doc:CODEX_WORKERS`. A request for one mode does not authorize the other.
+- For Codex sub-agent waits or long-running shell jobs: resolve
+  `doc:CODEX_WAITING`.
 - To resume prior work: read `docs/STATE.md`.
 - To leave or resume a session handoff: resolve `doc:SESSION_HANDOFF`.
 - For rule/system/maintenance work: read `docs/OPERATING_PRINCIPLES.md` first.

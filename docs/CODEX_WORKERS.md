@@ -43,6 +43,10 @@ do not accidentally inherit the parent's expensive model through a full fork.
 Follow the current tool schema. Keep tightly coupled work and final integration
 with the assigning task.
 
+For completion-only worker reporting and parent waits, resolve
+`doc:CODEX_WAITING`. Native sub-agent lifecycle handling stays with the native
+collaboration tools; CLI queue delivery is a separate shell-job option.
+
 ## Separate Sessions
 
 1. Add the exact return task ID/host and one result-file path to the packet.

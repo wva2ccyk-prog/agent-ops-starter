@@ -15,6 +15,7 @@ MEMORY_LEDGER|docs/MEMORY_LEDGER.md|reusable lessons only
 HANDOFF_TEMPLATE|docs/HANDOFF_TEMPLATE.md|task instruction template for bounded work
 SESSION_HANDOFF|docs/SESSION_HANDOFF.md|leave/resume a session handoff; dated files filed per project
 CODEX_WORKERS|docs/CODEX_WORKERS.md|explicit Codex worker selection and separate-session dispatch
+CODEX_WAITING|docs/CODEX_WAITING.md|completion-aware Codex waits and optional shell-job notifications
 RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
 
 ## Rules For This File

@@ -37,6 +37,7 @@ baseline**입니다. 개인용 새 컴퓨터 부트스트랩으로도 사용합�
 | `tools/check_docs.py` | 문서 무결성·크기 상한 검사 (Python, 모든 OS) | 사람/훅 |
 | `tools/check_docs.ps1` | 같은 검사의 PowerShell 판. 파이썬이 없을 때 | 사람 |
 | `tools/docs_hook.py` | 규칙 편집 뒤 검사 결과를 AI에게 돌려주는 선택형 훅 | Codex/Claude Code |
+| `docs/CODEX_WAITING.md`, `tools/run_and_notify.py` | 선택형 Codex 완료 대기·긴 셸 작업의 1회 알림 | Codex (해당 작업 때) |
 | `ESSAY.md` | 이 구조가 나온 이유 — 반년 운영의 실패 기록과 원리 | 사람 |
 
 ## 운영 루틴 (사람이 할 일)
@@ -129,6 +130,16 @@ Claude Code는 루트 `AGENTS.md`가 아니라 `CLAUDE.md`를 읽습니다. 운�
 확인하고, 미지원이면 임의 대체하지 않습니다. 세션 ID·전달 상태는 이 저장소에
 포함하지 않습니다. 이 선택 기능은 다른 AI CLI의 기본 동작을 정의하지 않습니다.
 
+## Codex 선택 기능: 완료 대기
+
+서브에이전트가 일하는 동안 메인이 짧게 깨어나 상태를 반복 확인하면 불필요한
+모델 실행이 늘어날 수 있습니다. `docs/CODEX_WAITING.md`는 워커의 중간 보고를
+완료·판단이 필요한 장애로 제한하고, 메인이 완료 신호에 반응하는 대기를 쓰게
+합니다. 긴 셸 작업에는 `tools/run_and_notify.py`로 결과를 먼저 저장한 뒤
+`codex queue` 알림을 한 번 보낼 수 있습니다. 대상 환경에서 실제 수신까지
+검증해야 하며, 큐 등록 성공만으로 자동 재개나 토큰 절감을 보장하지 않습니다.
+개인 경로·세션 ID·실행 로그는 이 저장소에 넣지 않습니다.
+
 ## Codex 선택 기능: ChatGPT 협업
 
 Codex 앱에서 "GPT와 협업해" 또는 "GPT Pro에게 리뷰시켜"라고 요청하면
@@ -189,6 +200,7 @@ It takes ten minutes.
 | `tools/check_docs.py` | Docs integrity and size-cap check (Python, any OS) | Humans/hooks |
 | `tools/check_docs.ps1` | Same checks in PowerShell, for machines without Python | Humans |
 | `tools/docs_hook.py` | Optional post-edit feedback hook for rule docs | Codex/Claude Code |
+| `docs/CODEX_WAITING.md`, `tools/run_and_notify.py` | Optional Codex completion waits and one shell-job notification | Codex (matching tasks) |
 | `ESSAY.md` | Where this structure came from — six months of failures and principles | Humans |
 
 ## Operating Routine (the human's job)
@@ -280,6 +292,16 @@ sessions return one completion result without continuous supervision. On a new
 computer, verify model/effort and task creation/messaging availability; do not
 silently substitute unavailable capabilities. Keep session IDs and dispatch
 state local. This optional lane does not define other AI CLIs' defaults.
+
+## Optional Codex Feature: Completion Waiting
+
+Repeated short status checks while a worker runs can cause unnecessary model
+execution. `docs/CODEX_WAITING.md` limits parent-directed worker messages to
+completion or blockers needing a decision, and uses completion-aware parent
+waits. For long shell jobs, `tools/run_and_notify.py` saves the result before
+attempting one `codex queue` notification. Verify actual receipt in the target
+environment; queue acceptance alone does not establish automatic continuation
+or token savings. Keep personal paths, session IDs, and execution logs local.
 
 ## Optional Codex Feature: ChatGPT Collaboration
 
