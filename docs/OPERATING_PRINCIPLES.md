@@ -40,6 +40,16 @@ Never ask for binary keep/delete over a corpus. Instead:
    approval before anything is deleted.
 4. **Archive by default** (move out of the active path); hard delete is the
    exception.
+5. **History expires**: `archive/` and `handoffs/done/` are holding areas;
+   the permanent record is Git backup. Files older than 30 days become Diet
+   candidates (signal: expired history). After owner approval of the ranked
+   list, run the backup including the selected files, confirm its commit, then
+   delete. Recover with `git log -- <path>` in the backup repo. The checker
+   warns when items expire; it never deletes them.
+
+Pointers are for live docs only (`doc:` tokens). Live docs (router, `docs/`,
+project README/STATE/DECISIONS) never point into `archive/`: superseded content
+moves there without a pointer. The checker warns on archive-file pointers.
 
 ## Unattended Runs
 

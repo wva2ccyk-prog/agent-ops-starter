@@ -2,7 +2,9 @@
 
 Copy this when giving the model a bounded task (especially in a fresh session).
 Filled-in handoffs are disposable — save them in an `archive/` folder if worth
-keeping, never in `docs/`.
+keeping, never in `docs/`. Archived packets and completed session handoffs
+become Diet candidates after 30 days (`doc:OPERATING_PRINCIPLES`). For session
+continuity use `doc:SESSION_HANDOFF`; this template assigns bounded work.
 
 ```md
 # <Task Title>

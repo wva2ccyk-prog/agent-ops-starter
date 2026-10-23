@@ -22,6 +22,70 @@ for ($i = 0; $i -lt $args.Count; $i++) {
   $Extra += [string]$args[$i]
 }
 
+# History: WARN for archive/ and completed handoff files older than 30 days
+# (YYYYMMDD- filename date, else mtime), and archive-file pointers in live docs.
+# Report-only; removal requires ranked-list approval and a confirmed Git backup.
+function Get-HistoryAgeDays([IO.FileInfo]$File, [datetime]$Now) {
+  $stamp = $File.LastWriteTime
+  if ($File.Name -match '^(\d{8})-') {
+    $date = [datetime]::MinValue
+    if ([datetime]::TryParseExact($Matches[1], 'yyyyMMdd',
+        [Globalization.CultureInfo]::InvariantCulture,
+        [Globalization.DateTimeStyles]::None, [ref]$date)) { $stamp = $date }
+  }
+  return ($Now - $stamp).TotalDays
+}
+
+function Get-HistoryWarnings([string]$CheckRoot, [object[]]$LiveFiles) {
+  $now = Get-Date
+  # Walk folders once, pruning Git, symlinks, caches, and each history subtree.
+  $pending = [Collections.Generic.Stack[string]]::new()
+  $pending.Push($CheckRoot)
+  while ($pending.Count -gt 0) {
+    $folder = Get-Item -LiteralPath ($pending.Pop()) -Force
+    $isHistory = $folder.Name -ceq 'archive' -or
+      ($folder.Name -ceq 'done' -and $folder.Parent.Name -cin @('handoffs','thread_handoffs'))
+    if ($isHistory) {
+      $old = @(Get-ChildItem -LiteralPath $folder.FullName -Recurse -File -Force |
+        Where-Object { -not $_.LinkType -and $_.Name -ne '.DS_Store' -and (Get-HistoryAgeDays $_ $now) -gt 30 })
+      if ($old.Count -gt 0) {
+        $rel = $folder.FullName.Substring($CheckRoot.Length).TrimStart('\', '/') -replace '\\', '/'
+        "${rel}: $($old.Count) file(s) older than 30 days; propose a ranked Diet pass (approval, backup commit, then delete)"
+      }
+      continue
+    }
+    foreach ($child in (Get-ChildItem -LiteralPath $folder.FullName -Directory -Force)) {
+      if ($child.Name -notin @('.git','__pycache__') -and -not $child.LinkType) { $pending.Push($child.FullName) }
+    }
+  }
+  foreach ($file in $LiveFiles) {
+    $text = (Get-Content -LiteralPath $file.FullName -Raw) -replace '\\', '/'
+    $hits = @([regex]::Matches($text, 'archive/(?:[\w.-]+/)*[\w.-]+\.\w+') |
+      ForEach-Object { $_.Value } | Sort-Object -Unique)
+    if ($hits.Count -gt 0) {
+      $label = [IO.Path]::GetRelativePath($CheckRoot, $file.FullName) -replace '\\', '/'
+      "history pointer in ${label}: $($hits -join ', ')"
+    }
+  }
+}
+
+function New-HistoryFixture([string]$Root, [string]$DoneRel) {
+  $archive = Join-Path $Root 'archive'
+  New-Item -ItemType Directory -Force -Path (Join-Path $archive 'nested'), (Join-Path $Root $DoneRel) | Out-Null
+  foreach ($name in 'old.md','20260230-invalid.md','20990101-future.md') {
+    $path = Join-Path $archive $name
+    Set-Content -LiteralPath $path -Value 'history archive/ignored.md'
+    (Get-Item -LiteralPath $path).LastWriteTime = (Get-Date).AddDays(-40)
+  }
+  foreach ($name in '20000101-dated.md','nested/20000101-nested.md','fresh.md') {
+    Set-Content -LiteralPath (Join-Path $archive $name) -Value 'history'
+  }
+  Set-Content -LiteralPath (Join-Path (Join-Path $Root $DoneRel) '20000101-done.md') -Value 'completed'
+  New-Item -ItemType Directory -Force -Path (Join-Path $Root '.hidden/archive') | Out-Null
+  Set-Content -LiteralPath (Join-Path $Root '.hidden/archive/20000101-hidden.md') -Value 'hidden history'
+  Add-Content -LiteralPath (Join-Path $Root 'docs/REAL.md') -Value 'see archive/nested/old.md'
+}
+
 function Normalize-ResolverPath([string]$Value) {
   if ([string]::IsNullOrWhiteSpace($Value)) { return $null }
   $normalized = $Value.Trim().Replace('\', '/')
@@ -161,6 +225,18 @@ function Invoke-DocsCheck([string]$CheckRoot, [bool]$PermitOrphans, [string[]]$E
     }
   }
 
+  $historyLive = @($scanFiles)
+  $projects = Join-Path $CheckRoot 'projects'
+  if (Test-Path -LiteralPath $projects -PathType Container) {
+    foreach ($project in (Get-ChildItem -LiteralPath $projects -Directory)) {
+      $historyLive += @(Get-ChildItem -LiteralPath $project.FullName -File -Filter '*.md' |
+        Where-Object { $_.Name -in @('README.md','STATE.md','DECISIONS.md') })
+    }
+  }
+  foreach ($extra in $ExtraFiles) {
+    if (Test-Path -LiteralPath $extra -PathType Leaf) { $historyLive += Get-Item -LiteralPath $extra }
+  }
+  $warnings += @(Get-HistoryWarnings $CheckRoot $historyLive)
   return [pscustomobject]@{
     Errors = $errors
     Warnings = $warnings
@@ -207,11 +283,22 @@ RETRIEVAL_MAP|docs/RETRIEVAL_MAP.md|this resolver
 ## Rules For This File
 "@ | Set-Content -LiteralPath (Join-Path $tmp "docs/RETRIEVAL_MAP.md") -Encoding UTF8
 
+    New-HistoryFixture $tmp 'handoffs/done'
+
     $strict = Invoke-DocsCheck $tmp $false @($extraFile, (Join-Path $sandbox "NOPE.md"))
     $migration = Invoke-DocsCheck $tmp $true
     $joined = (@($strict.Errors) + @($strict.Warnings)) -join " | "
     $migrationJoined = (@($migration.Errors) + @($migration.Warnings)) -join " | "
     $expectations = [ordered]@{
+      'archive expiry warn' = (@($strict.Warnings | Where-Object { $_ -like 'archive: 4 file(s) older than 30 days*' }).Count -eq 1)
+      'done expiry warn' = (@($strict.Warnings | Where-Object { $_ -like 'handoffs/done: 1 file(s) older*' }).Count -eq 1)
+      'history pointer warn' = $joined.Contains('history pointer in docs/REAL.md: archive/nested/old.md')
+      'hidden history traversed' = (@($strict.Warnings | Where-Object { $_ -like '.hidden/archive: 1 file(s) older*' }).Count -eq 1)
+      'history not live' = (-not $joined.Contains('archive/ignored.md'))
+      'filename date beats mtime' = ((Get-HistoryAgeDays (Get-Item (Join-Path $tmp 'archive/20000101-dated.md')) (Get-Date)) -gt 30)
+      'future date beats old mtime' = ((Get-HistoryAgeDays (Get-Item (Join-Path $tmp 'archive/20990101-future.md')) (Get-Date)) -lt 0)
+      'invalid date falls back' = ((Get-HistoryAgeDays (Get-Item (Join-Path $tmp 'archive/20260230-invalid.md')) (Get-Date)) -gt 30)
+      '30-day boundary retained' = ((Get-HistoryAgeDays (Get-Item (Join-Path $tmp 'archive/old.md')) ((Get-Item (Join-Path $tmp 'archive/old.md')).LastWriteTime.AddDays(30))) -eq 30)
       "missing file" = $joined.Contains("missing file: GONE")
       "directory target" = $joined.Contains("missing file: DIRECTORY")
       "malformed too few" = ($joined.Contains("malformed resolver row") -and $joined.Contains("BROKEN_TOO_FEW"))

@@ -11,6 +11,11 @@ downgrades only the orphan condition to WARN.
 Size caps: router 4KB, state docs 6KB, other active docs 10KB, and optional
 always-loaded ``--extra`` files 3KB. Oversize is an error; above 80% warns.
 
+History: WARN for files in archive/ and completed handoff storage older than
+30 days (YYYYMMDD- filename date, else mtime), and archive-file pointers in live
+docs. History is a holding area; removal needs ranked-list approval and a
+confirmed Git backup commit. Never deletes files.
+
 Run:       python3 tools/check_docs.py
 Migration: python3 tools/check_docs.py --allow-orphans
 Self-test: python3 tools/check_docs.py --self-test
@@ -18,6 +23,8 @@ Self-test: python3 tools/check_docs.py --self-test
 from __future__ import annotations
 
 import argparse
+import os
+import time
 import re
 import tempfile
 from pathlib import Path, PurePosixPath
@@ -34,6 +41,11 @@ CAP_REPAIR = ("first split task-specific parts into a new resolver-registered do
               "then archive superseded content; trim wording last. Raising a cap is a user decision")
 STATE_DOC_NAMES = {"STATE", "MEMORY_LEDGER"}
 RESOLVER_TABLE_HEADING = "## Resolver Table"
+
+HISTORY_MAX_DAYS = 30
+HISTORY_DONE_REL = "handoffs/done"
+NAME_DATE_RE = re.compile(r"^(\d{8})-")
+ARCHIVE_POINTER_RE = re.compile(r"archive/(?:[\w.-]+/)*[\w.-]+\.\w+")
 
 
 def parse_resolver_table(map_text: str) -> tuple[list[tuple[str, str, str]], list[str]]:
@@ -92,6 +104,68 @@ def check_size(path: Path, cap: int, errors: list[str], warnings: list[str]) -> 
         errors.append(f"oversize: {detail} - {CAP_REPAIR}")
     elif size > cap * WARN_RATIO:
         warnings.append(f"near cap: {detail} - {CAP_REPAIR}")
+
+
+def age_days(path: Path, now: float) -> float:
+    """Prefer a valid YYYYMMDD- filename date; otherwise use file mtime."""
+    stamp = path.stat().st_mtime
+    match = NAME_DATE_RE.match(path.name)
+    if match:
+        try:
+            stamp = time.mktime(time.strptime(match.group(1), "%Y%m%d"))
+        except ValueError:
+            pass
+    return (now - stamp) / 86400
+
+
+def check_history(root: Path, live: list[Path], warnings: list[str]) -> None:
+    """Read-only expiry warnings; history is never treated as active rules."""
+    now = time.time()
+    for folder, dirs, _files in os.walk(root, followlinks=False):
+        dirs[:] = sorted(d for d in dirs if d not in {".git", "__pycache__"}
+                         and not (Path(folder) / d).is_symlink())
+        history = Path(folder)
+        if not (history.name == "archive" or
+                (history.name == "done" and history.parent.name in
+                 {"handoffs", "thread_handoffs"})):
+            continue
+        old = sum(1 for f in history.rglob("*")
+                  if f.is_file() and not f.is_symlink() and f.name != ".DS_Store"
+                  and age_days(f, now) > HISTORY_MAX_DAYS)
+        dirs[:] = []
+        if old:
+            rel = history.relative_to(root).as_posix()
+            warnings.append(f"{rel}: {old} file(s) older than {HISTORY_MAX_DAYS} days; "
+                            "propose a ranked Diet pass (approval, backup commit, then delete)")
+    for path in live:
+        text = path.read_text(encoding="utf-8", errors="replace").replace("\\", "/")
+        hits = sorted(set(ARCHIVE_POINTER_RE.findall(text)))
+        if hits:
+            # Router/extras can be outside the rule root on an installed Mac.
+            label = path.relative_to(root).as_posix() if path.is_relative_to(root) else str(path)
+            warnings.append(f"history pointer in {label}: {', '.join(hits)}")
+
+
+def make_history_fixture(root: Path) -> None:
+    archive = root / "archive"
+    (archive / "nested").mkdir(parents=True)
+    done = root / HISTORY_DONE_REL
+    done.mkdir(parents=True)
+    past = time.time() - 40 * 86400
+    for rel in ("old.md", "20260230-invalid.md", "20990101-future.md"):
+        path = archive / rel
+        path.write_text("history archive/ignored.md\n")
+        os.utime(path, (past, past))
+    (archive / "20000101-dated.md").write_text("old date, new mtime\n")
+    (archive / "nested" / "20000101-nested.md").write_text("nested\n")
+    (archive / "fresh.md").write_text("fresh\n")
+    (done / "20000101-done.md").write_text("completed\n")
+    hidden = root / ".hidden" / "archive"
+    hidden.mkdir(parents=True)
+    (hidden / "20000101-hidden.md").write_text("hidden history\n")
+    live = root / "docs" / "REAL.md"
+    with live.open("a") as stream:
+        stream.write("\nsee archive/nested/old.md\n")
 
 
 def check(root: Path, *, allow_orphans: bool = False,
@@ -160,6 +234,12 @@ def check(root: Path, *, allow_orphans: bool = False,
         else:
             errors.append(f"extra file missing: {path}")
 
+    live = ([router] if router.is_file() else []) + doc_files + [p for p in extras if p.is_file()]
+    projects = root / "projects"
+    if projects.is_dir():
+        live += sorted(p for p in projects.glob("*/*.md")
+                       if p.name in {"README.md", "STATE.md", "DECISIONS.md"})
+    check_history(root, live, warnings)
     return errors, warnings, len(rows), len(doc_files)
 
 
@@ -218,6 +298,7 @@ def self_test() -> int:
         root.mkdir()
         outside = sandbox / "outside.md"
         make_broken_fixture(root, outside)
+        make_history_fixture(root)
         extra = sandbox / "EXTRA.md"
         extra.write_bytes(b"x" * (EXTRA_MAX_BYTES + 1))
         errors, warnings, _, _ = check(root, extras=(extra, sandbox / "NOPE.md"))
@@ -225,6 +306,15 @@ def self_test() -> int:
         migration_errors, migration_warnings, _, _ = check(root, allow_orphans=True)
         migration_joined = " | ".join(migration_errors + migration_warnings)
         expectations = {
+            "archive expiry warn": any(w.startswith("archive: 4 file(s) older than 30 days") for w in warnings),
+            "done expiry warn": any(w.startswith(HISTORY_DONE_REL + ": 1 file(s) older") for w in warnings),
+            "history pointer warn": any("history pointer in docs/REAL.md: archive/nested/old.md" in w for w in warnings),
+            "hidden history traversed": any(w.startswith(".hidden/archive: 1 file(s) older") for w in warnings),
+            "history not live": not any("archive/ignored.md" in w for w in warnings),
+            "filename date beats mtime": age_days(root / "archive/20000101-dated.md", time.time()) > 30,
+            "future date beats old mtime": age_days(root / "archive/20990101-future.md", time.time()) < 0,
+            "invalid date falls back": age_days(root / "archive/20260230-invalid.md", time.time()) > 30,
+            "30-day boundary retained": age_days(root / "archive/old.md", (root / "archive/old.md").stat().st_mtime + 30 * 86400) == 30,
             "missing file": "missing file: GONE" in joined,
             "directory target": "missing file: DIRECTORY" in joined,
             "malformed too few": "malformed resolver row" in joined and "BROKEN_TOO_FEW" in joined,
