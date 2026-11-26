@@ -1,0 +1,23 @@
+# Antigravity (agy) Adapter
+
+Thin adapter for using agy on its own. The operating router is imported below;
+do not grow this file into a rulebook.
+
+Read `<KIT_DIR>/AGENTS.md` first and follow it as the router. `docs/` and
+`tools/` paths there resolve against `<KIT_DIR>`.
+
+## Paths
+
+- Generated output, evidence, and scratch: `<RUNTIME_DIR>` unless the user or the
+  task packet names another location.
+- Project code and project state: the project's own repo/root.
+
+## When Claude sent you a packet
+
+- A packet that says `mode: worker` is the whole task: execute it, write the
+  result where it says, and do not read further operating docs.
+
+## Communication
+
+- Final user-facing summaries in Korean; paths, commands, and pass/fail markers
+  may stay in English.
