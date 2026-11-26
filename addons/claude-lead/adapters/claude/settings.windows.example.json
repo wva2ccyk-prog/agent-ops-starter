@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"<KIT_DIR>/tools/docs_hook.py\" --extra \"<HOME>/.claude/CLAUDE.md\" --extra \"<HOME>/.claude/agents/haiku-worker.md\" --extra \"<HOME>/.claude/agents/sonnet-worker.md\" --extra \"<HOME>/.claude/agents/opus-worker.md\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -Command \"[console]::beep(880,200)\"",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

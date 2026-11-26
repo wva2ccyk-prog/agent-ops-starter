@@ -1,0 +1,38 @@
+# Claude Adapter
+
+Thin adapter. The operating router is imported below; do not grow this file
+into a rulebook.
+
+@<KIT_DIR>/AGENTS.md
+
+## Paths
+
+- `docs/`, `tools/` and `projects/` paths in the router resolve against `<KIT_DIR>`.
+- Generated output, evidence, and scratch: `<RUNTIME_DIR>` unless the user
+  names another location.
+- Project code: the project's own repo/root. Project records, when the work is a
+  project: `<KIT_DIR>/projects/<name>/` (`doc:PROJECTS`).
+- Work on a named project (e.g. 유사성 분석 → `doc-similarity`) starts from
+  `<KIT_DIR>/projects/<name>/README.md`.
+
+## Workers
+
+- External workers (GPT via Codex, agy, GPT Pro) only when the user names one
+  ("GPT 불러서 시켜", "agy한테 맡겨"): resolve `doc:EXTERNAL_WORKERS`.
+- Claude sub-agents (`haiku-worker`, `sonnet-worker`, `opus-worker`) only when
+  the user asks for one. One request authorizes one worker unless the user asks
+  for several. On failure, repair the packet or report; do not switch models.
+
+## Working style
+
+- When the work the user asked for is done and checked, stop and report. Don't
+  add features, tests, files, docs or refactors that weren't asked for.
+- Keep working until everything the user asked for is done, and only stop to ask
+  when you can't go on without the user or before a risky step.
+- Docs and existing code disagree: follow the code's conventions and list each
+  mismatch in the final reply.
+
+## Communication
+
+- Final user-facing summaries in Korean; paths, commands, and pass/fail markers
+  may stay in English.

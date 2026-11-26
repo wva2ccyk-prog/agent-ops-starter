@@ -120,6 +120,8 @@ Claude Code는 루트 `AGENTS.md`가 아니라 `CLAUDE.md`를 읽습니다. 운�
 불러오세요. 워커 서브에이전트 예시와 훅 설정도 같은 폴더에 있습니다. 설치
 순서와 전역 설치 시 주의점은 `adapters/claude/README.md`를 보세요.
 
+Claude를 리드로 두고 GPT(Codex)·agy·GPT Pro를 불러 쓰려면 선택형 애드온 [`addons/claude-lead/`](addons/claude-lead/README.md)를 보세요.
+
 ## Codex 선택 기능: 워커와 별도 세션
 
 "서브에이전트로 맡겨" 또는 "새 세션으로 맡겨"라고 명시했을 때만
@@ -282,6 +284,8 @@ Claude Code reads `CLAUDE.md`, not the root `AGENTS.md`. Do not copy the
 operating docs; use the thin `CLAUDE.md` template in `adapters/claude/` to import
 the router. The same folder has a worker sub-agent example and hook settings.
 See `adapters/claude/README.md` for setup order and global-install notes.
+
+To run Claude as the lead that calls GPT (Codex), agy and GPT Pro, see the optional add-on [`addons/claude-lead/`](addons/claude-lead/README.md).
 
 ## Optional Codex Feature: Workers And Separate Sessions
 
